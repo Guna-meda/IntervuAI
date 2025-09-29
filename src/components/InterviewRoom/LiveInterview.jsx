@@ -58,26 +58,33 @@ export default function LiveInterview({
     }
   };
 
-  // Stop recording and send audio to backend
-  const stopListening = async () => {
-    try {
-      const transcript = await LiveWhisperService.stopRecording();
-      setIsListening(false);
+ // Stop recording and send audio to backend
+const stopListening = async () => {
+  try {
+    const transcript = await LiveWhisperService.stopRecording();
+    console.log('Raw transcript from service:', transcript);
+    console.log('Type of transcript:', typeof transcript);
+    
+    setIsListening(false);
 
-      if (transcript) {
-        setUserTranscript(transcript);
-        if (onUserResponse) onUserResponse(transcript);
-      } else {
-        setUserTranscript("❌ Failed to transcribe audio");
-      }
-
-      if (onStatusUpdate) onStatusUpdate('processing');
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-      setUserTranscript("❌ Error processing audio");
-      setIsListening(false);
+    if (transcript) {
+      // Extract the actual transcript text if it's an object
+      const transcriptText = typeof transcript === 'object' ? transcript.transcript : transcript;
+      console.log('Extracted transcript text:', transcriptText);
+      
+      setUserTranscript(transcriptText);
+      if (onUserResponse) onUserResponse(transcript);
+    } else {
+      setUserTranscript("❌ Failed to transcribe audio");
     }
-  };
+
+    if (onStatusUpdate) onStatusUpdate('processing');
+  } catch (error) {
+    console.error('Error stopping recording:', error);
+    setUserTranscript("❌ Error processing audio");
+    setIsListening(false);
+  }
+};
 
   return (
     <div className="live-interview">

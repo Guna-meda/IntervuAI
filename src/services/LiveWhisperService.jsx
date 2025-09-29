@@ -65,27 +65,36 @@ class LiveWhisperService {
     });
   }
 
-  /**
-   * Send audio to backend Whisper API
-   */
-  async sendAudioToBackend(audioBlob) {
-    try {
-      const formData = new FormData();
-      formData.append("file", audioBlob, "audio.webm");
+async sendAudioToBackend(audioBlob) {
+  try {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "audio.webm");
 
-      const response = await fetch(
-        "http://localhost:3001/api/v1/whisper/transcribe",
-        { method: "POST", body: formData }
-      );
+    const response = await fetch(
+      "http://localhost:3001/api/v1/whisper/transcribe",
+      { method: "POST", body: formData }
+    );
 
-      if (!response.ok) throw new Error(`Backend error: ${response.status}`);
-      const data = await response.json();
-      return data.data;
-    } catch (err) {
-      console.error("Error sending audio to backend:", err);
-      return null;
+    if (!response.ok) {
+      // Try to get error details from response
+      let errorDetail = `Status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorDetail += ` - ${JSON.stringify(errorData)}`;
+      } catch {
+        const errorText = await response.text();
+        errorDetail += ` - ${errorText}`;
+      }
+      throw new Error(`Backend error: ${errorDetail}`);
     }
+    
+    const data = await response.json();
+    return data.data;
+  } catch (err) {
+    console.error("Error sending audio to backend:", err);
+    return null;
   }
+}
 }
 
 export default new LiveWhisperService();

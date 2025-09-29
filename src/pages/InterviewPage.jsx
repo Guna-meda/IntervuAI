@@ -32,27 +32,30 @@ export default function InterviewPage() {
     }, 2000);
   };
 
-  const handleUserResponse = async (transcript) => {
-    console.log('User response received:', transcript);
-    
-    // Store response
-    const newResponse = {
-      id: Date.now(),
-      transcript: transcript,
-      question: currentQuestion,
-      timestamp: new Date().toISOString()
-    };
-    
-    setResponses(prev => [...prev, newResponse]);
-    
-    // TODO: Send to LLM for analysis and next question
-    console.log('Sending to LLM for analysis...');
-    
-    // Simulate LLM processing
-    setTimeout(() => {
-      askNextQuestion();
-    }, 2000);
+const handleUserResponse = async (transcript) => {
+  console.log('User response received:', transcript);
+  
+  // Extract the actual transcript text if it's an object
+  const transcriptText = typeof transcript === 'object' ? transcript.transcript : transcript;
+  
+  // Store response
+  const newResponse = {
+    id: Date.now(),
+    transcript: transcriptText,  // Now this is a string, not an object
+    question: currentQuestion,
+    timestamp: new Date().toISOString()
   };
+  
+  setResponses(prev => [...prev, newResponse]);
+  
+  // TODO: Send to LLM for analysis and next question
+  console.log('Sending to LLM for analysis...');
+  
+  // Simulate LLM processing
+  setTimeout(() => {
+    askNextQuestion();
+  }, 2000);
+};
 
   
   const handleStatusUpdate = (status) => {

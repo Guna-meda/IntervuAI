@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import WebRTCService from '../../services/webrtcService';
-import LiveWhisperService from '../../services/LiveWhisperService';
+import LiveSpeechService from '../../services/LiveSpeechService'; // ✅ replaced Whisper
 
 export default function LiveInterview({ 
   currentQuestion, 
@@ -19,7 +19,7 @@ export default function LiveInterview({
     return () => {
       // Cleanup
       WebRTCService.stopStream();
-      LiveWhisperService.stopRecording(); // make sure recording is stopped
+      LiveSpeechService.stopRecording(); // ✅ changed name
     };
   }, []);
 
@@ -28,7 +28,7 @@ export default function LiveInterview({
     if (currentQuestion) {
       setTimeout(() => {
         startListening();
-      }, 3000); // optional delay
+      }, 3000);
     }
   }, [currentQuestion]);
 
@@ -43,14 +43,13 @@ export default function LiveInterview({
     }
   };
 
-  // Start recording audio
   const startListening = async () => {
     setIsListening(true);
     setUserTranscript("🎤 Listening... Speak your answer");
     if (onStatusUpdate) onStatusUpdate('listening');
 
     try {
-      await LiveWhisperService.startRecording();
+      await LiveSpeechService.startRecording(); // ✅ replaced
     } catch (error) {
       console.error('Failed to start recording:', error);
       setUserTranscript('❌ Microphone access required');
@@ -58,31 +57,35 @@ export default function LiveInterview({
     }
   };
 
- // Stop recording and send audio to backend
 const stopListening = async () => {
   try {
-    const transcript = await LiveWhisperService.stopRecording();
-    console.log('Raw transcript from service:', transcript);
-    console.log('Type of transcript:', typeof transcript);
+    console.log('Stopping recording and processing...');
     
+    const transcript = await LiveSpeechService.stopRecording();
+    console.log('Transcript result:', transcript);
+
     setIsListening(false);
 
-    if (transcript) {
-      // Extract the actual transcript text if it's an object
-      const transcriptText = typeof transcript === 'object' ? transcript.transcript : transcript;
-      console.log('Extracted transcript text:', transcriptText);
-      
-      setUserTranscript(transcriptText);
+    // Handle different transcript scenarios
+    if (transcript && transcript.trim().length > 0) {
+      setUserTranscript(transcript);
       if (onUserResponse) onUserResponse(transcript);
+      if (onStatusUpdate) onStatusUpdate('processing');
+    } else if (transcript === '') {
+      // Empty but valid (no speech detected)
+      setUserTranscript("No speech detected. Please speak clearly and try again.");
+      if (onStatusUpdate) onStatusUpdate('no-speech');
     } else {
-      setUserTranscript("❌ Failed to transcribe audio");
+      // Undefined or error
+      setUserTranscript("Error processing audio. Please try again.");
+      if (onStatusUpdate) onStatusUpdate('error');
     }
-
-    if (onStatusUpdate) onStatusUpdate('processing');
+    
   } catch (error) {
     console.error('Error stopping recording:', error);
-    setUserTranscript("❌ Error processing audio");
+    setUserTranscript("Error processing audio: " + error.message);
     setIsListening(false);
+    if (onStatusUpdate) onStatusUpdate('error');
   }
 };
 

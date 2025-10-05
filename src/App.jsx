@@ -1,12 +1,13 @@
 import React from 'react'
-import AudioRecorder from './Recorder'
 import InterviewPage from './pages/InterviewPage'
+import IntervuAILanding from './pages/LandingPage'
 
 function App() {
 
   return (
     <>
-     <InterviewPage />
+     {/* <InterviewPage /> */}
+     <IntervuAILanding />
     </>
   )
 }

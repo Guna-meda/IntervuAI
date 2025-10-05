@@ -8,6 +8,8 @@ export default function InterviewPage() {
   const [interviewStage, setInterviewStage] = useState('not-started');
   const [responses, setResponses] = useState([]);
   const [userTranscript, setUserTranscript] = useState('');
+    const [originalQIndex, setOriginalQIndex] = useState(0);    
+
 
   const handleResponseComplete = async (blob, type) => {
     console.log(`${type} response received:`, blob);
@@ -28,30 +30,58 @@ export default function InterviewPage() {
     }, 2000);
   };
 
-  const handleUserResponse = async (transcript) => {
-    console.log('User response received:', transcript);
+const handleUserResponse = async (transcript) => {
+  console.log('User response received:', transcript);
+  
+  // Handle empty transcript gracefully
+  if (!transcript || transcript.trim().length === 0) {
+    console.log('Empty transcript received');
+    setUserTranscript("No speech detected. Please try again.");
+    return;
+  }
+  
+  // Store response
+  const newResponse = {
+    id: Date.now(),
+    transcript: transcript,
+    question: currentQuestion,
+    timestamp: new Date().toISOString()
+  };
+  
+  setResponses(prev => [...prev, newResponse]);
+  
+  // ✅ NEW: Call LLM for follow-up question
+  try {
+    console.log('Calling LLM for follow-up question...');
     
-    if (!transcript || transcript.trim().length === 0) {
-      console.log('Empty transcript received');
-      setUserTranscript("No speech detected. Please try again.");
-      return;
+    const response = await fetch('http://localhost:3001/api/v1/llm/follow-up', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentQuestion: currentQuestion,
+        userResponse: transcript
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.success && data.data.followUpQuestion) {
+      console.log('Received follow-up:', data.data.followUpQuestion);
+      // Use the AI-generated follow-up as next question
+      setCurrentQuestion(data.data.followUpQuestion);
+    } else {
+      // Fallback to original question list if AI fails
+      askNextQuestion();
     }
     
-    const newResponse = {
-      id: Date.now(),
-      transcript: transcript,
-      question: currentQuestion,
-      timestamp: new Date().toISOString()
-    };
-    
-    setResponses(prev => [...prev, newResponse]);
-    
-    console.log('Sending to LLM for analysis...');
-    
-    setTimeout(() => {
-      askNextQuestion();
-    }, 2000);
-  };
+  } catch (error) {
+    console.error('Error getting follow-up question:', error);
+    // Fallback to original question list
+    askNextQuestion();
+  }
+};
 
   const handleStatusUpdate = (status) => {
     console.log('Interview status:', status);
@@ -74,21 +104,27 @@ export default function InterviewPage() {
     askNextQuestion();
   };
 
-  const askNextQuestion = async () => {
-    const questions = [
-      "Tell me about yourself and your background.",
-      "What are your greatest strengths?",
-      "Describe a challenging project you worked on.",
-      "Where do you see yourself in 5 years?",
-      "Why do you want to work for this company?"
-    ];
-    
-    const question = questions[responses.length % questions.length];
+   const askNextQuestion = async () => {
+const questions = [
+      "Fixed question :Tell me about yourself and your background.",
+      "Fixed question :What are your greatest strengths?",
+      "Fixed question :Describe a challenging project you worked on.",
+      "Fixed question :Where do you see yourself in 5 years?",
+      "Fixed question :Why do you want to work for this company?"
+    ];  
+  if (originalQIndex < questions.length) {
+    const question = questions[originalQIndex];
     setCurrentQuestion(question);
+    setOriginalQIndex(prev => prev + 1); // Move to next original question
     
+    // TTS Logic - makes the AI "speak" the question
     setIsPlaying(true);
     setTimeout(() => setIsPlaying(false), 3000);
-  };
+  } else {
+    // All original questions done
+    console.log('Interview completed!');
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">

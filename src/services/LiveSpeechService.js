@@ -1,4 +1,3 @@
-// src/services/LiveSpeechService.js
 let mediaRecorder;
 let audioChunks = [];
 let audioContext;
@@ -16,7 +15,7 @@ const LiveSpeechService = {
         } 
       });
       
-      // Setup audio analysis for silence detection
+      // Setup audio analysis (retained for potential future use, but not used for validation)
       audioContext = new AudioContext();
       analyser = audioContext.createAnalyser();
       const source = audioContext.createMediaStreamSource(stream);
@@ -40,7 +39,7 @@ const LiveSpeechService = {
     }
   },
 
-  // Check if audio contains speech (not silence)
+  // Check if audio contains speech (not silence) - retained but not used
   hasSpeechContent(audioBuffer) {
     if (!analyser) return false;
 
@@ -54,7 +53,7 @@ const LiveSpeechService = {
     }
     const average = sum / dataArray.length / 255;
     
-    // Threshold for speech detection (adjust as needed)
+    // Threshold for speech detection
     return average > 0.02;
   },
 
@@ -80,22 +79,16 @@ const LiveSpeechService = {
         try {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
           
-          // VALIDATION: Check if audio is worth sending
+          // VALIDATION: Check audio duration
           const audioDuration = await this.getAudioDuration(audioBlob);
-          const hasSpeech = this.hasSpeechContent();
           
           console.log('Audio validation:', {
-            duration: audioDuration,
-            hasSpeech: hasSpeech,
-            size: audioBlob.size
+            duration: audioDuration
           });
 
-          // Don't call API if:
-          // - Audio is too short (< 1 second)
-          // - No speech detected
-          // - File size too small (likely silence)
-          if (audioDuration < 1 || !hasSpeech || audioBlob.size < 1000) {
-            console.log('LiveSpeechService: Skipping API call - no meaningful audio');
+          // Don't call API if audio is too short (< 2 seconds)
+          if (audioDuration < 2) {
+            console.log('LiveSpeechService: Skipping API call - audio shorter than 2 seconds');
             resolve(''); // Return empty transcript
             return;
           }
@@ -103,7 +96,7 @@ const LiveSpeechService = {
           const formData = new FormData();
           formData.append('audio', audioBlob, 'audio.webm');
 
-          console.log('LiveSpeechService: Sending meaningful audio to backend...');
+          console.log('LiveSpeechService: Sending audio to backend...');
           
           const res = await fetch('http://localhost:3001/api/v1/speech/transcribe', {
             method: 'POST',

@@ -7,6 +7,7 @@ import Overview from './pages/Overview';
 import IntervuAI from './pages/IntervuAI';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import InterviewPage from "./pages/InterviewPage";
 
 const AppContent = () => {
   const { user, loading } = useAuthStore();
@@ -49,9 +50,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <BrowserRouter>
-      
         <AppContent />
     </BrowserRouter>
+    // <InterviewPage />
   );
 };
 

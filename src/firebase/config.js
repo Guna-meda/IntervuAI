@@ -10,11 +10,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_APP_ID,
 };
 
-console.log("Firebase Config:", {
-  apiKey: import.meta.env.VITE_API_KEY ? "✓ Set" : "✗ Missing",
-  authDomain: import.meta.env.VITE_AUTH_DOMAIN ? "✓ Set" : "✗ Missing",
-  projectId: import.meta.env.VITE_PROJECT_ID ? "✓ Set" : "✗ Missing",
-});
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

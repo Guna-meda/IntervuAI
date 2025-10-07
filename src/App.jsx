@@ -13,6 +13,18 @@ const AppContent = () => {
   const { user, loading } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
 
+  React.useEffect(() => {
+    const closeSidebar = () => {
+      setIsSidebarOpen(false);
+    };
+
+    window.addEventListener('closeSidebar', closeSidebar);
+
+    return () => {
+      window.removeEventListener('closeSidebar', closeSidebar);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -32,6 +44,7 @@ const AppContent = () => {
               <Route path="/intervuai" element={<IntervuAI />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/interviewPage" element={<InterviewPage />} />
               <Route path="/" element={<Navigate to="/overview" replace />} />
               <Route path="*" element={<Navigate to="/overview" replace />} />
             </Routes>
@@ -50,9 +63,8 @@ const AppContent = () => {
 const App = () => {
   return (
     <BrowserRouter>
-        <AppContent />
+      <AppContent />
     </BrowserRouter>
-    // <InterviewPage />
   );
 };
 

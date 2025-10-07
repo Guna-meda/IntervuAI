@@ -5,6 +5,7 @@ import {
   LogOut, Menu, X, Sparkles, Bell
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
+import { logout } from '../../firebase/auth';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -110,6 +111,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             <motion.button
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all mt-2"
               whileHover={{ scale: 1.02, x: 4 }}
+              onClick={() => logout()}
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />
               <AnimatePresence>
@@ -223,7 +225,10 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                     <div className="text-xs text-gray-500">Tech Lead</div>
                   </div>
                 </div>
-                <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full">
+                <button
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full"
+                  onClick={() => logout()}
+                >
                   <LogOut className="w-5 h-5" />
                   <span className="font-medium">Log Out</span>
                 </button>

@@ -5,12 +5,16 @@ import {
   TrendingUp, Star, ChevronRight, Sparkles,
   MessageSquare, Target, Brain, ChevronLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function IntervuAI() {
   const [userName] = useState('Guna');
   const [hoveredCard, setHoveredCard] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const navigate = useNavigate();
 
   const sessionsRef = useRef(null);
   const feedbackRef = useRef(null);
@@ -102,6 +106,16 @@ export default function IntervuAI() {
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const dayNames = [
+    { short: 'S', full: 'Sunday' },
+    { short: 'M', full: 'Monday' },
+    { short: 'T', full: 'Tuesday' },
+    { short: 'W', full: 'Wednesday' },
+    { short: 'T', full: 'Thursday' },
+    { short: 'F', full: 'Friday' },
+    { short: 'S', full: 'Saturday' }
   ];
 
   const changeMonth = (delta) => {
@@ -208,6 +222,7 @@ export default function IntervuAI() {
                   className="px-4 py-2 bg-white text-blue-600 rounded-lg font-semibold text-xs flex items-center gap-1 group/btn"
                   whileHover={{ scale: 1.05, boxShadow: '0 10px 20px rgba(255,255,255,0.3)' }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/interviewPage')}
                 >
                   Schedule Now
                   <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
@@ -250,6 +265,8 @@ export default function IntervuAI() {
                   className="px-4 py-2 bg-white text-emerald-600 rounded-lg font-semibold text-xs flex items-center gap-1 group/btn"
                   whileHover={{ scale: 1.05, boxShadow: '0 10px 20px rgba(255,255,255,0.3)' }}
                   whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/interviewPage')}
+
                 >
                   Start Now
                   <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
@@ -381,9 +398,9 @@ export default function IntervuAI() {
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1 text-xs">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
-                  <div key={day} className="text-center font-semibold text-gray-500 py-1">
-                    {day}
+                {dayNames.map((day, index) => (
+                  <div key={day.full} className="text-center font-semibold text-gray-500 py-1">
+                    {day.short}
                   </div>
                 ))}
                 {Array.from({ length: startingDayOfWeek }).map((_, idx) => (

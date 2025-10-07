@@ -46,6 +46,14 @@ export const logout = async () => {
   try {
     await signOut(auth);
     console.log("Logout successful");
+    // Centralize post-logout UX behavior here so UI components remain thin.
+    // Reload the app so auth state resets; UI can also redirect if desired.
+    try {
+      window.location.reload();
+    } catch (e) {
+      // window may be undefined in certain test environments — ignore
+      console.warn('Could not reload after logout:', e);
+    }
   } catch (error) {
     console.error("Logout error:", error);
     throw error;

@@ -1,53 +1,237 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, BarChart2, Brain, TrendingUp, User, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  BarChart2, TrendingUp, Target, Settings, 
+  LogOut, Menu, X, Sparkles, Bell
+} from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
   const navItems = [
-    { href: '/overview', icon: <BarChart2 className="w-5 h-5" />, label: 'Overview' },
-    { href: '/intervuai', icon: <Brain className="w-5 h-5" />, label: 'IntervuAI' },
-    { href: '/analytics', icon: <TrendingUp className="w-5 h-5" />, label: 'Analytics' },
-    { href: '/profile', icon: <User className="w-5 h-5" />, label: 'Profile' },
+    { href: '/overview', icon: BarChart2, label: 'Dashboard' },
+    { href: '/intervuai', icon: Target, label: 'IntervuAI' },
+    { href: '/analytics', icon: TrendingUp, label: 'Analytics' },
+    { href: '/settings', icon: Settings, label: 'Settings' },
   ];
 
   return (
-    <aside className={`fixed top-0 left-0 h-full bg-blue-100/20 backdrop-blur-md border-r border-blue-200/50 shadow-md p-4 flex flex-col gap-4 z-40 transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'}`}>
-      <div className="flex items-center gap-2 mb-8">
-        <motion.div
-          className="relative"
-          whileHover={{ scale: 1.05 }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-300 to-cyan-400 rounded-lg blur opacity-75 transition"></div>
-          <div className="relative bg-gradient-to-br from-blue-400 to-cyan-500 w-8 h-8 rounded-lg flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
+    <>
+      {/* Desktop Sidebar */}
+      <motion.aside
+        initial={false}
+        animate={{ width: isOpen ? 280 : 80 }}
+        className="hidden lg:block fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-40"
+      >
+        <div className="flex flex-col h-full p-4">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-8 px-2">
+            <motion.div className="relative" whileHover={{ scale: 1.05 }}>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-xl blur opacity-75"></div>
+              <div className="relative bg-gradient-to-br from-blue-500 to-cyan-500 w-10 h-10 rounded-xl flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+            </motion.div>
+            <AnimatePresence>
+              {isOpen && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                    IntervuAI
+                  </div>
+                  <div className="text-xs text-gray-500">powered by Veda</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </motion.div>
-        <div className={`overflow-hidden transition-all ${isOpen ? 'w-36' : 'w-0'}`}>
-          <div className="text-lg font-bold text-gray-800">IntervuAI</div>
-          <div className="text-xs text-gray-500 -mt-0.5">powered by Veda</div>
+
+          {/* Navigation */}
+          <nav className="flex-1 space-y-2">
+            {navItems.map((item, idx) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <motion.div key={idx} whileHover={{ scale: 1.02, x: 4 }} whileTap={{ scale: 0.98 }}>
+                  <Link
+                    to={item.href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="font-medium whitespace-nowrap"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </nav>
+
+          {/* Profile Section */}
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <motion.div
+              className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 cursor-pointer transition-all"
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                G
+              </div>
+              <AnimatePresence>
+                {isOpen && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <div className="font-semibold text-gray-800">Guna</div>
+                    <div className="text-xs text-gray-500">Tech Lead</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            <motion.button
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all mt-2"
+              whileHover={{ scale: 1.02, x: 4 }}
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <AnimatePresence>
+                {isOpen && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="font-medium"
+                  >
+                    Log Out
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </div>
+
+          {/* Toggle Button */}
+          <button
+            onClick={toggleSidebar}
+            className="mt-4 p-2 rounded-lg hover:bg-gray-100 text-gray-600 mx-auto"
+          >
+            {isOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </motion.aside>
+
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 p-4 z-50 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-br from-blue-500 to-cyan-500 w-10 h-10 rounded-xl flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <div className="font-bold text-gray-800">IntervuAI</div>
+            <div className="text-xs text-gray-500">powered by Veda</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2 rounded-lg hover:bg-gray-100"
+          >
+            <Bell className="w-5 h-5 text-gray-600" />
+          </motion.button>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-lg hover:bg-gray-100"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </div>
 
-      <nav className="flex flex-col gap-4">
-        {navItems.map((item, index) => (
-          <motion.a
-            key={index}
-            href={item.href}
-            className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition ${item.href === window.location.pathname ? 'bg-blue-200/30 text-blue-600 shadow-sm' : 'text-gray-600 hover:text-blue-500 hover:bg-blue-100/30'}`}
-            whileHover={{ scale: 1.05 }}
-          >
-            {item.icon}
-            <span className={`overflow-hidden transition-all ${isOpen ? 'w-32' : 'w-0'}`}>{item.label}</span>
-          </motion.a>
-        ))}
-      </nav>
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="lg:hidden fixed inset-0 bg-black/50 z-40"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 20 }}
+              className="lg:hidden fixed top-0 right-0 bottom-0 w-80 bg-white shadow-2xl z-50 p-6"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-bold text-gray-800">Menu</h2>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <X size={24} />
+                </button>
+              </div>
 
-      <button
-        className="mt-auto text-gray-800 hover:text-blue-500"
-        onClick={toggleSidebar}
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-    </aside>
+              <nav className="space-y-2 mb-8">
+                {navItems.map((item, idx) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={idx}
+                      to={item.href}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                        isActive
+                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="border-t border-gray-200 pt-4 space-y-2">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold">
+                    G
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-800">Guna</div>
+                    <div className="text-xs text-gray-500">Tech Lead</div>
+                  </div>
+                </div>
+                <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full">
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium">Log Out</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

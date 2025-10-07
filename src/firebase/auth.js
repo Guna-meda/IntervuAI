@@ -10,14 +10,13 @@ export const loginWithGoogle = async () => {
   try {
     console.log("Starting Google popup...");
     const result = await signInWithPopup(auth, provider);
-    console.log("Popup result:", result);
 
     // Get Firebase ID token
     const idToken = await result.user.getIdToken();
-    console.log("Firebase ID token:", idToken);
 
     // Send token and user data to backend
-    const response = await fetch("/api/createOrFetchUser", {
+  // Make sure this points to the backend server and correct route
+  const response = await fetch("http://localhost:3001/api/v1/users/createOrFetchUser", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -36,7 +35,6 @@ export const loginWithGoogle = async () => {
 
     // Receive MongoDB user data
     const mongoUser = await response.json();
-    console.log("MongoDB user received:", mongoUser);
     return { firebaseUser: result.user, mongoUser };
   } catch (error) {
     console.error("Popup or MongoDB error:", error);
@@ -64,10 +62,9 @@ export const getCurrentUserWithToken = async () => {
 
     // Get fresh ID token (forces refresh if expired)
     const idToken = await currentUser.getIdToken(true);
-    console.log("Current user ID token:", idToken);
 
     // Fetch MongoDB user data
-    const response = await fetch("/api/createOrFetchUser", {
+  const response = await fetch("http://localhost:3001/api/v1/users/createOrFetchUser", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

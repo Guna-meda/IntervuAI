@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BarChart2, TrendingUp, Target, Settings, 
-  LogOut, Menu, X, Sparkles, Bell
+  LogOut, Menu, X, Sparkles, Bell, User
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { logout } from '../../firebase/auth';
@@ -87,26 +87,28 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 
           {/* Profile Section */}
           <div className="border-t border-gray-200 pt-4 mt-4">
-            <motion.div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 cursor-pointer transition-all"
-              whileHover={{ scale: 1.02 }}
-            >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold flex-shrink-0">
-                G
-              </div>
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <div className="font-semibold text-gray-800">Guna</div>
-                    <div className="text-xs text-gray-500">Tech Lead</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+            <Link to="/profile">
+              <motion.div
+                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 cursor-pointer transition-all"
+                whileHover={{ scale: 1.02 }}
+              >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
+                  G
+                </div>
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <div className="font-semibold text-gray-800">Guna</div>
+                      <div className="text-xs text-gray-500">Tech Lead</div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </Link>
 
             <motion.button
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full transition-all mt-2"
@@ -202,6 +204,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                     <Link
                       key={idx}
                       to={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
                         isActive
                           ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
@@ -216,15 +219,19 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
               </nav>
 
               <div className="border-t border-gray-200 pt-4 space-y-2">
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50">
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold">
                     G
                   </div>
                   <div>
                     <div className="font-semibold text-gray-800">Guna</div>
-                    <div className="text-xs text-gray-500">Tech Lead</div>
+                    <div className="text-xs text-gray-500">View Profile</div>
                   </div>
-                </div>
+                </Link>
                 <button
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full"
                   onClick={() => logout()}

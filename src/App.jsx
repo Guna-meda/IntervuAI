@@ -6,8 +6,8 @@ import Sidebar from './components/Overall/Sidebar';
 import Overview from './pages/Overview';
 import IntervuAI from './pages/IntervuAI';
 import Analytics from './pages/Analytics';
-import Profile from './pages/Profile';
 import InterviewPage from "./pages/InterviewPage";
+import ProfilePage from "./pages/ProfilePage";
 
 const AppContent = () => {
   const { user, loading } = useAuthStore();
@@ -43,8 +43,8 @@ const AppContent = () => {
               <Route path="/overview" element={<Overview />} />
               <Route path="/intervuai" element={<IntervuAI />} />
               <Route path="/analytics" element={<Analytics />} />
-              <Route path="/profile" element={<Profile />} />
               <Route path="/interviewPage" element={<InterviewPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/" element={<Navigate to="/overview" replace />} />
               <Route path="*" element={<Navigate to="/overview" replace />} />
             </Routes>

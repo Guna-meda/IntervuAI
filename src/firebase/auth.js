@@ -1,25 +1,22 @@
+// firebase/auth.js
 import {
   signInWithPopup,
   signOut,
   GoogleAuthProvider,
   getAuth,
-} from "firebase/auth";
-import { auth, provider } from "./config";
+} from 'firebase/auth';
+import { auth, provider } from './config';
 
 export const loginWithGoogle = async () => {
   try {
-    console.log("Starting Google popup...");
+    console.log('Starting Google popup...');
     const result = await signInWithPopup(auth, provider);
-
-    // Get Firebase ID token
     const idToken = await result.user.getIdToken();
 
-    // Send token and user data to backend
-  // Make sure this points to the backend server and correct route
-  const response = await fetch("http://localhost:3001/api/v1/users/createOrFetchUser", {
-      method: "POST",
+    const response = await fetch('http://localhost:3001/api/v1/users/createOrFetchUser', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${idToken}`,
       },
       body: JSON.stringify({
@@ -30,14 +27,13 @@ export const loginWithGoogle = async () => {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to create/fetch user in MongoDB");
+      throw new Error('Failed to create/fetch user in MongoDB');
     }
 
-    // Receive MongoDB user data
     const mongoUser = await response.json();
-    return { firebaseUser: result.user, mongoUser };
+    return { firebaseUser: result.user, mongoUser: mongoUser.data };
   } catch (error) {
-    console.error("Popup or MongoDB error:", error);
+    console.error('Popup or MongoDB error:', error);
     throw error;
   }
 };
@@ -45,55 +41,47 @@ export const loginWithGoogle = async () => {
 export const logout = async () => {
   try {
     await signOut(auth);
-    console.log("Logout successful");
-    // Centralize post-logout UX behavior here so UI components remain thin.
-    // Reload the app so auth state resets; UI can also redirect if desired.
+    console.log('Logout successful');
     try {
       window.location.reload();
     } catch (e) {
-      // window may be undefined in certain test environments — ignore
       console.warn('Could not reload after logout:', e);
     }
   } catch (error) {
-    console.error("Logout error:", error);
+    console.error('Logout error:', error);
     throw error;
   }
 };
 
 export const getCurrentUserWithToken = async () => {
   try {
-    const currentUser = getAuth().currentUser;
+    const currentUser = auth.currentUser;
     if (!currentUser) {
-      console.log("No current user found");
+      console.log('No Firebase user found');
       return null;
     }
 
-    // Get fresh ID token (forces refresh if expired)
-    const idToken = await currentUser.getIdToken(true);
-
-    // Fetch MongoDB user data
-  const response = await fetch("http://localhost:3001/api/v1/users/createOrFetchUser", {
-      method: "POST",
+    const idToken = await currentUser.getIdToken();
+    
+    const response = await fetch('http://localhost:3001/api/v1/users/me', {
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
+        'Authorization': `Bearer ${idToken}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        uid: currentUser.uid,
-        email: currentUser.email,
-        displayName: currentUser.displayName,
-      }),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch MongoDB user data");
+      console.error(`HTTP error! status: ${response.status}`);
+      return null;
     }
 
     const mongoUser = await response.json();
-    console.log("MongoDB user for current user:", mongoUser);
-    return { firebaseUser: currentUser, mongoUser };
+    return {
+      firebaseUser: currentUser,
+      mongoUser: mongoUser
+    };
   } catch (error) {
-    console.error("Error fetching current user or MongoDB data:", error);
+    console.error('Error fetching current user:', error);
     return null;
   }
 };

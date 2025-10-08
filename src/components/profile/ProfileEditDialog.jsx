@@ -61,12 +61,14 @@ export default function ProfileEditDialog({ onClose, onSave }) {
       }
 
       const updatedUser = await response.json();
-      useAuthStore.getState().setUser(firebaseUser, updatedUser.data);
-      
+      useAuthStore.getState().setUser(firebaseUser, updatedUser.data || updatedUser);
+
       if (typeof onSave === 'function') {
-        onSave();
+        // pass back the updated user so parent can act on canonical server state
+        onSave(updatedUser.data || updatedUser);
       }
-      onClose();
+      // close the dialog after successful save
+      if (typeof onClose === 'function') onClose();
     } catch (error) {
       console.error('Error updating profile:', error);
       setError(error.message || 'Failed to update profile. Please try again.');

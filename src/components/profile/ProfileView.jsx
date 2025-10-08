@@ -489,11 +489,16 @@ export default function ProfileView() {
       </AnimatePresence>
       <AnimatePresence>
         {showEditDialog && (
-          <ProfileEditDialog
-            onClose={() => setShowEditDialog(false)} 
-            onSave={() => setShowEditDialog(false)}
-          />
-        )}
+            <ProfileEditDialog
+              onClose={() => setShowEditDialog(false)} 
+              onSave={(updatedUser) => {
+                // update store with server canonical user if provided
+                const firebaseUser = useAuthStore.getState().user;
+                if (updatedUser) useAuthStore.getState().setUser(firebaseUser, updatedUser);
+                setShowEditDialog(false);
+              }}
+            />
+          )}
       </AnimatePresence>
     </div>
   );

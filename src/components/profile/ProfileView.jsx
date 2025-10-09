@@ -21,6 +21,7 @@ export default function ProfileView() {
   const profile = mongoUser?.profile || {};
   const userStats = mongoUser?.stats || {};
   const userSkills = profile?.skills || [];
+  const userExperience = profile?.experience || [];
 
   const stats = [
     { icon: Target, label: 'Interviews', value: userStats.interviews || '0', color: 'bg-blue-50 text-blue-600' },
@@ -163,15 +164,15 @@ export default function ProfileView() {
                   )}
                 </div>
               </div>
-<motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowEditDialog(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Edit Profile
-                </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowEditDialog(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+                Edit Profile
+              </motion.button>
             </div>
           </div>
         </motion.div>
@@ -216,6 +217,41 @@ export default function ProfileView() {
               <p className="text-gray-700 leading-relaxed">
                 {profile?.bio || 'Add a bio to tell others about yourself...'}
               </p>
+            </motion.div>
+
+            {/* Experience Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Experience</h2>
+                {isEditing && (
+                  <button className="text-gray-400 hover:text-gray-600">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {userExperience.length > 0 ? (
+                userExperience.map((exp, idx) => (
+                  <div key={idx} className="mb-4 last:mb-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-semibold text-gray-900">{exp.role}</h3>
+                      {exp.current && (
+                        <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{exp.company}</p>
+                    <p className="text-sm text-gray-500">{exp.duration}</p>
+                    <p className="text-sm text-gray-700 mt-1">{exp.description}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm">No experience added yet</p>
+              )}
             </motion.div>
 
             {/* Skills Section */}
@@ -271,7 +307,6 @@ export default function ProfileView() {
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
-
               {profile?.resumeText ? (
                 <div className="space-y-4">
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -489,16 +524,15 @@ export default function ProfileView() {
       </AnimatePresence>
       <AnimatePresence>
         {showEditDialog && (
-            <ProfileEditDialog
-              onClose={() => setShowEditDialog(false)} 
-              onSave={(updatedUser) => {
-                // update store with server canonical user if provided
-                const firebaseUser = useAuthStore.getState().user;
-                if (updatedUser) useAuthStore.getState().setUser(firebaseUser, updatedUser);
-                setShowEditDialog(false);
-              }}
-            />
-          )}
+          <ProfileEditDialog
+            onClose={() => setShowEditDialog(false)} 
+            onSave={(updatedUser) => {
+              const firebaseUser = useAuthStore.getState().user;
+              if (updatedUser) useAuthStore.getState().setUser(firebaseUser, updatedUser);
+              setShowEditDialog(false);
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

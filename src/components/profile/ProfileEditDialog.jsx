@@ -1,7 +1,6 @@
-// components/profile/ProfileEditDialog.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Briefcase, FileText, Plus, X, Save } from 'lucide-react';
+import { User, Briefcase, FileText, Plus, X, Save, Globe, Github, Linkedin } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
 export default function ProfileEditDialog({ onClose, onSave }) {
@@ -12,12 +11,24 @@ export default function ProfileEditDialog({ onClose, onSave }) {
     fullName: profile.fullName || firebaseUser?.displayName || '',
     role: profile.role || '',
     company: profile.company || '',
+    joinDate: profile.joinDate || '',
     bio: profile.bio || '',
+    linkedin: profile.linkedin || '',
+    github: profile.github || '',
+    website: profile.website || '',
     skills: profile.skills || [],
+    experience: profile.experience || [],
     resumeText: profile.resumeText || ''
   });
 
   const [currentSkill, setCurrentSkill] = useState('');
+  const [currentExperience, setCurrentExperience] = useState({
+    company: '',
+    role: '',
+    duration: '',
+    description: '',
+    current: false
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,6 +46,29 @@ export default function ProfileEditDialog({ onClose, onSave }) {
     setFormData(prev => ({
       ...prev,
       skills: prev.skills.filter(skill => skill !== skillToRemove)
+    }));
+  };
+
+  const addExperience = () => {
+    if (currentExperience.company && currentExperience.role && currentExperience.duration) {
+      setFormData(prev => ({
+        ...prev,
+        experience: [...prev.experience, { ...currentExperience }]
+      }));
+      setCurrentExperience({
+        company: '',
+        role: '',
+        duration: '',
+        description: '',
+        current: false
+      });
+    }
+  };
+
+  const removeExperience = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      experience: prev.experience.filter((_, idx) => idx !== index)
     }));
   };
 
@@ -64,10 +98,8 @@ export default function ProfileEditDialog({ onClose, onSave }) {
       useAuthStore.getState().setUser(firebaseUser, updatedUser.data || updatedUser);
 
       if (typeof onSave === 'function') {
-        // pass back the updated user so parent can act on canonical server state
         onSave(updatedUser.data || updatedUser);
       }
-      // close the dialog after successful save
       if (typeof onClose === 'function') onClose();
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -80,6 +112,12 @@ export default function ProfileEditDialog({ onClose, onSave }) {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       addSkill();
+    }
+  };
+
+  const handleExperienceKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      addExperience();
     }
   };
 
@@ -154,6 +192,19 @@ export default function ProfileEditDialog({ onClose, onSave }) {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Join Date
+            </label>
+            <input
+              type="text"
+              value={formData.joinDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, joinDate: e.target.value }))}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              placeholder="e.g. January 2023"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Bio *
             </label>
             <textarea
@@ -163,6 +214,54 @@ export default function ProfileEditDialog({ onClose, onSave }) {
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
               placeholder="Tell us about your experience and interests..."
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              LinkedIn
+            </label>
+            <div className="relative">
+              <Linkedin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={formData.linkedin}
+                onChange={(e) => setFormData(prev => ({ ...prev, linkedin: e.target.value }))}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                placeholder="LinkedIn profile URL"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              GitHub
+            </label>
+            <div className="relative">
+              <Github className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={formData.github}
+                onChange={(e) => setFormData(prev => ({ ...prev, github: e.target.value }))}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                placeholder="GitHub profile URL"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Website
+            </label>
+            <div className="relative">
+              <Globe className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={formData.website}
+                onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                placeholder="Personal website URL"
+              />
+            </div>
           </div>
 
           <div>
@@ -207,6 +306,101 @@ export default function ProfileEditDialog({ onClose, onSave }) {
             </div>
             {formData.skills.length === 0 && (
               <p className="text-sm text-gray-500 mt-2">Add at least one skill</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Experience
+            </label>
+            <div className="space-y-4 mb-3">
+              <div>
+                <input
+                  type="text"
+                  value={currentExperience.company}
+                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, company: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                  placeholder="Company name"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={currentExperience.role}
+                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                  placeholder="Role/Title"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={currentExperience.duration}
+                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, duration: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                  placeholder="Duration (e.g. Jan 2020 - Present)"
+                  onKeyPress={handleExperienceKeyPress}
+                />
+              </div>
+              <div>
+                <textarea
+                  value={currentExperience.description}
+                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                  placeholder="Description of responsibilities and achievements"
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={currentExperience.current}
+                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, current: e.target.checked }))}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="text-sm text-gray-700">Current position</label>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={addExperience}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Add Experience
+              </motion.button>
+            </div>
+            <div className="space-y-2">
+              {formData.experience.map((exp, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{exp.role}</p>
+                      <p className="text-sm text-gray-600">{exp.company}</p>
+                      <p className="text-sm text-gray-500">{exp.duration}</p>
+                      <p className="text-sm text-gray-700 mt-1">{exp.description}</p>
+                      {exp.current && (
+                        <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeExperience(idx)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            {formData.experience.length === 0 && (
+              <p className="text-sm text-gray-500 mt-2">No experience added yet</p>
             )}
           </div>
 

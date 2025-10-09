@@ -8,6 +8,7 @@ import IntervuAI from './pages/IntervuAI';
 import Analytics from './pages/Analytics';
 import InterviewPage from "./pages/InterviewPage";
 import ProfilePage from "./pages/ProfilePage";
+import PreInterviewPage from "./components/InterviewRoom/PreInterviewPage";
 
 const AppContent = () => {
   const { user, loading } = useAuthStore();
@@ -45,6 +46,7 @@ const AppContent = () => {
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/interviewPage" element={<InterviewPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/pre-interview" element={<PreInterviewPage />} />
               <Route path="/" element={<Navigate to="/overview" replace />} />
               <Route path="*" element={<Navigate to="/overview" replace />} />
             </Routes>

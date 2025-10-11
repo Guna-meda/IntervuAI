@@ -1,118 +1,273 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sparkles, Play, Pause, RotateCcw, 
-  Volume2, VolumeX, CheckCircle, Circle, MessageSquare,
+  Sparkles, Play, RotateCcw, 
+  Volume2, VolumeX, CheckCircle, MessageSquare,
   Clock, Award, ChevronRight, ChevronDown, Video, 
-  VideoOff, Settings, Maximize2
+  Settings, Brain, Target, BarChart3, User
 } from 'lucide-react';
-import LiveInterview from '../components/InterviewRoom/LiveInterview';  // Adjust path if needed (e.g., '../components/LiveInterview')
+import LiveInterview from '../components/InterviewRoom/LiveInterview';
+import { useUserInterviewStore } from '../store/interviewStore';
+import { generateAnswerFeedback, completeRound, startInterview, generatePreparedQuestion } from '../services/interviewService';
 
 export default function InterviewPage() {
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [interviewStage, setInterviewStage] = useState('ready');
+  const [interviewStage, setInterviewStage] = useState('ready'); // ready, in-progress, completed
   const [responses, setResponses] = useState([]);
-  const [originalQIndex, setOriginalQIndex] = useState(0);
+  const [currentRound, setCurrentRound] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [roundQuestions, setRoundQuestions] = useState([]);
+  const [interviewData, setInterviewData] = useState({
+    role: 'Frontend Developer',
+    totalRounds: 3,
+    interviewId: null
+  });
 
-  const questions = [
-    "Tell me about yourself and your background.",
-    "What are your greatest strengths?",
-    "Describe a challenging project you worked on.",
-    "Where do you see yourself in 5 years?",
-    "Why do you want to work for this company?"
-  ];
+  // Get data from store
+  const { 
+    currentInterviewId, 
+    availableRoles,
+    setCurrentInterviewId 
+  } = useUserInterviewStore();
 
   useEffect(() => {
-    // Signal to close sidebar when component mounts
+    // Close sidebar when component mounts
     window.dispatchEvent(new CustomEvent('closeSidebar'));
-  }, []);
+    
+    // Initialize interview if not already set
+    if (!currentInterviewId) {
+      const newInterviewId = `interview_${Date.now()}`;
+      setCurrentInterviewId(newInterviewId);
+      setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
+    } else {
+      setInterviewData(prev => ({ ...prev, interviewId: currentInterviewId }));
+    }
+  }, [currentInterviewId, setCurrentInterviewId]);
 
   const handleUserResponse = async (transcript) => {
     if (!transcript || transcript.trim().length === 0) {
       return;
     }
     
-    const newResponse = {
-      id: Date.now(),
-      transcript: transcript,
-      question: currentQuestion,
-      timestamp: new Date().toISOString()
-    };
+    setLoading(true);
     
-    setResponses(prev => [...prev, newResponse]);
-    
-    // Call LLM for follow-up question
     try {
-      const response = await fetch('http://localhost:3001/api/v1/llm/follow-up', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentQuestion: currentQuestion,
-          userResponse: transcript
-        }),
-      });
-
-      const data = await response.json();
+      // Create response object
+      const newResponse = {
+        id: Date.now(),
+        question: currentQuestion,
+        answer: transcript,
+        timestamp: new Date().toISOString(),
+        score: 0,
+        feedback: '',
+        status: 'processing'
+      };
       
-      if (data.success && data.data.followUpQuestion) {
-        setCurrentQuestion(data.data.followUpQuestion);
-        
-        // TTS Logic for follow-up question (simulated)
-        setIsPlaying(true);
-        setTimeout(() => setIsPlaying(false), 3000);
+      setResponses(prev => [...prev, newResponse]);
+      
+      // Call feedback API
+      const feedbackData = await generateAnswerFeedback(
+        currentQuestion,
+        transcript,
+        currentInterviewId,
+        currentRound
+      );
+      
+      // Update response with feedback
+      setResponses(prev => 
+        prev.map(response => 
+          response.id === newResponse.id 
+            ? { 
+                ...response, 
+                score: feedbackData.score || 7,
+                feedback: feedbackData.feedback || 'Good response, could use more detail.',
+                summary: feedbackData.summary || transcript.substring(0, 100) + '...',
+                status: 'completed'
+              }
+            : response
+        )
+      );
+      
+      // Store question in round questions for completion
+      const questionData = {
+        question: currentQuestion,
+        answer: transcript,
+        score: feedbackData.score || 7,
+        feedback: feedbackData.feedback,
+        summary: feedbackData.summary,
+        timestamp: new Date().toISOString()
+      };
+      
+      setRoundQuestions(prev => [...prev, questionData]);
+      
+      // Generate follow-up question or move to next
+      if (roundQuestions.length < 2) { // 2 questions per round (can adjust)
+        await generateNextQuestion();
       } else {
-        // Fallback to original question list if AI fails
-        askNextQuestion();
+        // Round complete
+        await completeCurrentRound();
       }
       
     } catch (error) {
-      console.error('Error getting follow-up question:', error);
-      // Fallback to original question list
-      askNextQuestion();
+      console.error('Error processing response:', error);
+      // Update response with error
+      setResponses(prev => 
+        prev.map(response => 
+          response.id === Date.now() 
+            ? { ...response, status: 'error', feedback: 'Failed to process response' }
+            : response
+        )
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleStatusUpdate = (status) => {
-    console.log('Interview status:', status);
-  };
-
-  const startInterview = () => {
-    setInterviewStage('in-progress');
-    askNextQuestion();
-  };
-
-  const askNextQuestion = () => {
-    if (originalQIndex < questions.length) {
-      const question = questions[originalQIndex];
-      setCurrentQuestion(question);
-      setOriginalQIndex(prev => prev + 1);
+  const generateNextQuestion = async () => {
+    try {
+      // Use the actual API to generate prepared question
+      const response = await generatePreparedQuestion(currentInterviewId, currentRound);
+      
+      if (response.data && response.data.question) {
+        setCurrentQuestion(response.data.question);
+      } else {
+        // Fallback questions if API fails
+        const fallbackQuestions = [
+          "Can you explain the Virtual DOM in React and how it improves performance?",
+          "What are React hooks and when would you use useMemo vs useCallback?",
+          "How do you handle state management in large React applications?",
+          "What's the difference between controlled and uncontrolled components?",
+          "How would you optimize a React application for better performance?"
+        ];
+        const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
+        setCurrentQuestion(nextQuestion);
+      }
+      
+      // Simulate AI speaking
+      setIsPlaying(true);
+      setTimeout(() => setIsPlaying(false), 2000);
+      
+    } catch (error) {
+      console.error('Error generating next question:', error);
+      // Use fallback questions
+      const fallbackQuestions = [
+        "Can you explain the Virtual DOM in React and how it improves performance?",
+        "What are React hooks and when would you use useMemo vs useCallback?",
+        "How do you handle state management in large React applications?"
+      ];
+      const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
+      setCurrentQuestion(nextQuestion);
       
       setIsPlaying(true);
-      setTimeout(() => setIsPlaying(false), 3000);
-    } else {
-      setInterviewStage('completed');
+      setTimeout(() => setIsPlaying(false), 2000);
+    }
+  };
+
+  const completeCurrentRound = async () => {
+    try {
+      setLoading(true);
+      
+      // Calculate round feedback
+      const roundScore = roundQuestions.reduce((sum, q) => sum + q.score, 0) / roundQuestions.length;
+      const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? 'Excellent performance!' : 'Good technical knowledge demonstrated.'}`;
+      
+      // Call backend to complete round
+      await completeRound(
+        currentInterviewId, 
+        currentRound, 
+        roundQuestions, 
+        roundFeedback
+      );
+      
+      // Move to next round or complete interview
+      if (currentRound < interviewData.totalRounds) {
+        setCurrentRound(prev => prev + 1);
+        setRoundQuestions([]);
+        setCurrentQuestion('');
+        await generateNextQuestion(); // Start next round with first question
+      } else {
+        setInterviewStage('completed');
+      }
+      
+    } catch (error) {
+      console.error('Error completing round:', error);
+      // Continue with UI even if API call fails
+      if (currentRound < interviewData.totalRounds) {
+        setCurrentRound(prev => prev + 1);
+        setRoundQuestions([]);
+        setCurrentQuestion('');
+        await generateNextQuestion();
+      } else {
+        setInterviewStage('completed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNewInterview = async () => {
+    try {
+      setLoading(true);
+      
+      const interviewDataToSend = {
+        role: interviewData.role,
+        totalRounds: interviewData.totalRounds,
+        interviewId: currentInterviewId
+      };
+      
+      // Start the interview via API
+      const response = await startInterview(interviewDataToSend);
+      
+      if (response.interviewId) {
+        setCurrentInterviewId(response.interviewId);
+        setInterviewData(prev => ({ ...prev, interviewId: response.interviewId }));
+      }
+      
+      setInterviewStage('in-progress');
+      await generateNextQuestion(); // Generate first question
+      
+    } catch (error) {
+      console.error('Error starting interview:', error);
+      // Continue with UI even if API call fails
+      setInterviewStage('in-progress');
+      await generateNextQuestion();
+    } finally {
+      setLoading(false);
     }
   };
 
   const resetInterview = () => {
     setInterviewStage('ready');
     setCurrentQuestion('');
-    setOriginalQIndex(0);
+    setCurrentRound(1);
     setResponses([]);
+    setRoundQuestions([]);
     setIsMuted(false);
     setShowHistory(false);
-    setVideoEnabled(true);
+    
+    // Generate new interview ID
+    const newInterviewId = `interview_${Date.now()}`;
+    setCurrentInterviewId(newInterviewId);
+    setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
+  };
+
+  const getRoundProgress = () => {
+    return Math.min((roundQuestions.length / 2) * 100, 100); // 2 questions per round
+  };
+
+  const getOverallProgress = () => {
+    const roundsCompleted = currentRound - 1;
+    const currentRoundProgress = roundQuestions.length / 2;
+    const totalProgress = (roundsCompleted + currentRoundProgress) / interviewData.totalRounds;
+    return Math.round(totalProgress * 100);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      {/* Sleek Header */}
+      {/* Header */}
       <motion.header 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -127,25 +282,27 @@ export default function InterviewPage() {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl blur opacity-50"></div>
                 <div className="relative w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+                  <Brain className="w-5 h-5 text-white" />
                 </div>
               </motion.div>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">Interview Room</h1>
-                <p className="text-xs text-gray-500">Practice with Veda AI</p>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">AI Interview Room</h1>
+                <p className="text-xs text-gray-500">Real-time practice with instant feedback</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full border border-blue-100"
-              >
-                <Clock className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-semibold text-gray-700">
-                  Question {originalQIndex}/{questions.length}
-                </span>
-              </motion.div>
+            <div className="flex items-center gap-4">
+              {/* Interview Info */}
+              <div className="hidden md:flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-gray-700">{interviewData.role}</p>
+                  <p className="text-xs text-gray-500">Round {currentRound} of {interviewData.totalRounds}</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                  <Target className="w-6 h-6 text-white" />
+                </div>
+              </div>
+
               <motion.button
                 onClick={resetInterview}
                 whileHover={{ scale: 1.05, rotate: 180 }}
@@ -157,13 +314,32 @@ export default function InterviewPage() {
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mt-3">
+          {/* Progress Bars */}
+          <div className="mt-3 space-y-2">
+            {/* Overall Progress */}
+            <div className="flex items-center justify-between text-xs text-gray-600">
+              <span>Overall Progress</span>
+              <span>{getOverallProgress()}%</span>
+            </div>
+            <div className="w-full bg-gray-200/50 rounded-full h-2 overflow-hidden">
+              <motion.div
+                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2"
+                initial={{ width: 0 }}
+                animate={{ width: `${getOverallProgress()}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              />
+            </div>
+            
+            {/* Round Progress */}
+            <div className="flex items-center justify-between text-xs text-gray-600">
+              <span>Round {currentRound} Progress</span>
+              <span>{roundQuestions.length}/2 questions</span>
+            </div>
             <div className="w-full bg-gray-200/50 rounded-full h-1 overflow-hidden">
               <motion.div
-                className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-1"
+                className="bg-gradient-to-r from-green-500 to-emerald-500 h-1"
                 initial={{ width: 0 }}
-                animate={{ width: `${(originalQIndex / questions.length) * 100}%` }}
+                animate={{ width: `${getRoundProgress()}%` }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
               />
             </div>
@@ -183,10 +359,9 @@ export default function InterviewPage() {
           >
             {/* AI Avatar Card */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              {/* 3D Avatar */}
-              <div className="relative p-8 bg-gradient-to-br from-slate-50 to-blue-50/50">
+              <div className="relative p-6 bg-gradient-to-br from-slate-50 to-blue-50/50">
                 <motion.div
-                  className="relative aspect-square max-w-[280px] mx-auto"
+                  className="relative aspect-square max-w-[240px] mx-auto"
                   animate={{
                     scale: isPlaying ? [1, 1.02, 1] : 1,
                   }}
@@ -207,15 +382,15 @@ export default function InterviewPage() {
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute top-4 right-4"
+                      className="absolute top-3 right-3"
                     >
-                      <div className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1.5 rounded-full shadow-lg">
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-2 py-1 rounded-full shadow-lg text-xs">
                         <motion.div
-                          className="w-2 h-2 bg-white rounded-full"
+                          className="w-1.5 h-1.5 bg-white rounded-full"
                           animate={{ scale: [1, 1.5, 1] }}
                           transition={{ duration: 0.8, repeat: Infinity }}
                         />
-                        <span className="text-xs font-semibold">Speaking</span>
+                        <span className="font-semibold">Speaking</span>
                       </div>
                     </motion.div>
                   )}
@@ -225,18 +400,28 @@ export default function InterviewPage() {
                 <div className="text-center mt-4">
                   <h3 className="text-lg font-bold text-gray-900">Veda AI</h3>
                   <p className="text-sm text-gray-500">Senior Technical Interviewer</p>
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <div className="flex items-center gap-1 text-xs text-gray-600">
+                      <User className="w-3 h-3" />
+                      {interviewData.role}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-600">
+                      <BarChart3 className="w-3 h-3" />
+                      Round {currentRound}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Question Display */}
+              {/* Current Question */}
               {currentQuestion && (
-                <div className="p-6 border-t border-gray-100">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
+                <div className="p-5 border-t border-gray-100">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
                     <p className="text-xs font-bold text-blue-700 mb-2 flex items-center gap-2">
                       <MessageSquare className="w-3 h-3" />
                       CURRENT QUESTION
                     </p>
-                    <p className="text-base font-medium text-gray-800 leading-relaxed">
+                    <p className="text-sm font-medium text-gray-800 leading-relaxed">
                       {currentQuestion}
                     </p>
                   </div>
@@ -253,22 +438,22 @@ export default function InterviewPage() {
               >
                 <div 
                   onClick={() => setShowHistory(!showHistory)}
-                  className="flex items-center justify-between p-5 bg-gradient-to-r from-slate-50 to-blue-50/50 cursor-pointer hover:bg-slate-100/50 transition-colors"
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 cursor-pointer hover:bg-slate-100/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                      <Award className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <Award className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-gray-900">Response History</h3>
-                      <p className="text-xs text-gray-500">{responses.length} responses recorded</p>
+                      <h3 className="text-sm font-bold text-gray-900">Response History</h3>
+                      <p className="text-xs text-gray-500">{responses.length} responses</p>
                     </div>
                   </div>
                   <motion.div
                     animate={{ rotate: showHistory ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
                   </motion.div>
                 </div>
 
@@ -279,7 +464,7 @@ export default function InterviewPage() {
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="max-h-96 overflow-y-auto"
+                      className="max-h-80 overflow-y-auto"
                     >
                       <div className="divide-y divide-gray-100">
                         {responses.slice().reverse().map((response, idx) => (
@@ -288,24 +473,37 @@ export default function InterviewPage() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.05 }}
-                            className="p-5 hover:bg-gray-50/50 transition-colors"
+                            className="p-4 hover:bg-gray-50/50 transition-colors"
                           >
-                            <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-bold text-indigo-600 px-2 py-1 bg-indigo-50 rounded-full">
                                 Q{responses.length - idx}
                               </span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(response.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  response.status === 'completed' ? 'bg-green-500' : 
+                                  response.status === 'processing' ? 'bg-yellow-500' : 'bg-red-500'
+                                }`} />
+                                <span className="text-xs text-gray-500">
+                                  {response.score}/10
+                                </span>
+                              </div>
                             </div>
-                            <p className="text-sm text-gray-700 font-medium mb-2">
+                            <p className="text-xs text-gray-700 font-medium mb-2 line-clamp-2">
                               {response.question}
                             </p>
-                            <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-3 rounded-lg border border-gray-200">
-                              <p className="text-sm text-gray-800 leading-relaxed">
-                                {response.transcript}
+                            <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-2 rounded-lg border border-gray-200">
+                              <p className="text-xs text-gray-800 leading-relaxed line-clamp-3">
+                                {response.answer}
                               </p>
                             </div>
+                            {response.feedback && (
+                              <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                                <p className="text-xs text-yellow-800 line-clamp-2">
+                                  {response.feedback}
+                                </p>
+                              </div>
+                            )}
                           </motion.div>
                         ))}
                       </div>
@@ -332,16 +530,28 @@ export default function InterviewPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">Live Interview Session</h3>
-                    <p className="text-xs text-gray-500">Powered by Veda AI</p>
+                    <p className="text-xs text-gray-500">
+                      {interviewData.role} • Round {currentRound} • {roundQuestions.length}/2 Questions
+                    </p>
                   </div>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-                >
-                  <Settings className="w-5 h-5" />
-                </motion.button>
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                  >
+                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </motion.button>
+                </div>
               </div>
 
               {/* Live Interview Component */}
@@ -349,11 +559,30 @@ export default function InterviewPage() {
                 <LiveInterview 
                   currentQuestion={currentQuestion}
                   onUserResponse={handleUserResponse}
-                  onStatusUpdate={handleStatusUpdate}
+                  onStatusUpdate={(status) => console.log('Interview status:', status)}
+                  disabled={interviewStage !== 'in-progress' || loading}
                 />
+                
+                {/* Loading State */}
+                {loading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center justify-center py-4"
+                  >
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"
+                      />
+                      Processing your response...
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
-              {/* Start/Complete Controls */}
+              {/* Controls */}
               <div className="p-6 border-t border-gray-100">
                 <AnimatePresence mode="wait">
                   {interviewStage === 'ready' && (
@@ -362,12 +591,13 @@ export default function InterviewPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
-                      onClick={startInterview}
+                      onClick={startNewInterview}
                       whileHover={{ scale: 1.02, boxShadow: '0 10px 40px rgba(59, 130, 246, 0.3)' }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+                      disabled={loading}
+                      className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Play className="w-5 h-5 inline mr-2" />
+                      <Play className="w-4 h-4 inline mr-2" />
                       Begin Interview Session
                     </motion.button>
                   )}
@@ -388,16 +618,27 @@ export default function InterviewPage() {
                       </motion.div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">Interview Complete!</h3>
-                        <p className="text-sm text-gray-600 mt-1">Great job! Review your responses below.</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          You've completed all {interviewData.totalRounds} rounds. Great work!
+                        </p>
                       </div>
-                      <motion.button
-                        onClick={resetInterview}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
-                      >
-                        Start New Session
-                      </motion.button>
+                      <div className="grid grid-cols-2 gap-3">
+                        <motion.button
+                          onClick={resetInterview}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                        >
+                          New Session
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+                        >
+                          View Report
+                        </motion.button>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

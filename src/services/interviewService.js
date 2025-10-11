@@ -1,30 +1,45 @@
 // services/interviewService.js
+import { auth } from '../firebase/config';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Helper function for API calls
 const apiCall = async (endpoint, options = {}) => {
-  const token = localStorage.getItem('token');
-  
+  let token = localStorage.getItem('token');
+
+  if (!token || token === 'null' || token === 'undefined') {
+    try {
+      if (auth?.currentUser) {
+        token = await auth.currentUser.getIdToken(true); // Force refresh
+        localStorage.setItem('token', token);
+      } else {
+        console.warn('No current user in Firebase auth for:', endpoint);
+        throw new Error('No authenticated user');
+      }
+    } catch (err) {
+      console.warn('Could not retrieve token:', err.message);
+      throw new Error('Authentication required');
+    }
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`, // Ensure token is always sent
+    ...options.headers,
+  };
+
   const config = {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   };
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
     if (!response.ok) {
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
-    
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('API call failed:', error);
+    console.error(`API call failed for ${endpoint}:`, error);
     throw error;
   }
 };

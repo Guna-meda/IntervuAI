@@ -1,11 +1,14 @@
 // components/PreInterviewPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserInterviewStore } from '../../store/interviewStore';
 import { 
   startInterview, 
-  getAllInterviews 
+  getAllInterviews,
+  getInterviewDetails 
 } from '../../services/interviewService';
+import { auth } from '../../firebase/config'; // Import Firebase auth for user check
 
 const PreInterviewPage = ({ interviewId, onStartInterview }) => {
   const {
@@ -27,6 +30,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
   const streamRef = useRef(null);
 
   const isExistingInterview = !!interviewId;
+  const navigate = useNavigate();
 
   // Load interview data from backend
   useEffect(() => {
@@ -39,12 +43,17 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
             setInterview(cached);
           } else {
             // Fetch from backend
-const response = await getInterviewDetails(interviewId);
+            const response = await getInterviewDetails(interviewId);
             setInterview(response.interview);
-            cacheInterview(response.interview);
+            try {
+              cacheInterview(response.interview);
+            } catch (cacheError) {
+              console.error('Error caching interview:', cacheError);
+            }
           }
         } catch (error) {
           console.error('Error loading interview:', error);
+          alert(`Failed to load interview: ${error.message || 'Please try again.'}`);
         }
       }
       
@@ -58,7 +67,7 @@ const response = await getInterviewDetails(interviewId);
     };
 
     loadInterviewData();
-  }, [interviewId, isExistingInterview]);
+  }, [interviewId, isExistingInterview, getCachedInterview, cacheInterview]);
 
   // Camera setup
   useEffect(() => {
@@ -115,6 +124,11 @@ const response = await getInterviewDetails(interviewId);
   }, [localMediaSettings]);
 
   const handleStartInterview = async () => {
+    if (!auth.currentUser) {
+      alert('Please log in to start an interview');
+      return;
+    }
+
     if (!isExistingInterview && !selectedRole) {
       alert('Please select a role to continue');
       return;
@@ -135,22 +149,36 @@ const response = await getInterviewDetails(interviewId);
       } else {
         // Start NEW interview - call backend API
         const roleData = availableRoles.find(r => r.value === selectedRole);
+        if (!roleData) {
+          throw new Error('Selected role not found');
+        }
         
         const response = await startInterview({
           role: roleData.label,
           totalRounds: 3
+          // Note: Do NOT send interviewId for new interviews; let backend generate it
         });
         
         interviewData = response.interview;
         setCurrentInterviewId(interviewData.interviewId);
-        cacheInterview(interviewData);
+        try {
+          cacheInterview(interviewData);
+        } catch (cacheError) {
+          console.error('Error caching interview:', cacheError);
+          // Continue despite cache error to avoid blocking the user
+        }
       }
 
       // Pass to parent to start the actual interview
-      onStartInterview(interviewData);
+      if (typeof onStartInterview === 'function') {
+        onStartInterview(interviewData);
+      }
+
+      // Navigate to the InterviewPage
+      navigate('/interviewPage');
     } catch (error) {
       console.error('Error starting interview:', error);
-      alert('Failed to start interview. Please try again.');
+      alert(`Failed to start interview: ${error.message || 'Please try again.'}`);
     } finally {
       setIsLoading(false);
     }
@@ -196,19 +224,19 @@ const response = await getInterviewDetails(interviewId);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-8 lg:p-12">
       {/* Header */}
       <motion.header 
-        className="mb-8"
+        className="mb-8 md:mb-12"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
       >
         <div className="text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
             {isExistingInterview ? 'Continue Interview' : 'Start New Interview'}
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
             {isExistingInterview 
               ? 'Resume your technical interview session' 
               : 'Get ready for your technical assessment'
@@ -217,15 +245,15 @@ const response = await getInterviewDetails(interviewId);
         </div>
       </motion.header>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12">
         {/* Left Panel - Camera & Controls */}
         <motion.div 
-          className="bg-white rounded-2xl shadow-lg p-6"
+          className="bg-white rounded-2xl shadow-md p-6 md:p-8"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
         >
-          <div className="space-y-6">
+          <div className="space-y-6 md:space-y-8">
             <div className="camera-container">
               <div className="bg-gray-900 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
                 {(localMediaSettings.video || localMediaSettings.audio) ? (
@@ -237,39 +265,38 @@ const response = await getInterviewDetails(interviewId);
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="text-center text-white p-8">
-                    <div className="text-4xl mb-4">📹</div>
-                    <p>Camera Preview</p>
-                    <p className="text-sm text-gray-400 mt-2">Enable camera to see preview</p>
+                  <div className="text-center text-white p-6 md:p-8">
+                    <p className="text-lg md:text-xl font-medium mb-2">Camera Preview</p>
+                    <p className="text-sm text-gray-400">Enable camera to see preview</p>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-3 mt-4">
+              <div className="grid grid-cols-2 gap-3 mt-4">
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`py-3 px-4 rounded-lg font-medium text-sm md:text-base transition-colors ${
                     localMediaSettings.video 
-                      ? 'bg-green-500 text-white' 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                   onClick={() => handleMediaToggle('video')}
                 >
-                  {localMediaSettings.video ? '📹 Camera On' : '📷 Camera Off'}
+                  {localMediaSettings.video ? 'Camera On' : 'Camera Off'}
                 </motion.button>
                 
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`py-3 px-4 rounded-lg font-medium text-sm md:text-base transition-colors ${
                     localMediaSettings.audio 
-                      ? 'bg-green-500 text-white' 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                   onClick={() => handleMediaToggle('audio')}
                 >
-                  {localMediaSettings.audio ? '🎤 Mic On' : '🔇 Mic Off'}
+                  {localMediaSettings.audio ? 'Mic On' : 'Mic Off'}
                 </motion.button>
               </div>
 
@@ -281,12 +308,13 @@ const response = await getInterviewDetails(interviewId);
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
                   >
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Camera:</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Camera</label>
                     <select
                       value={localMediaSettings.videoDeviceId || ''}
                       onChange={(e) => handleDeviceChange('video', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     >
                       {mediaDevices.video.map(device => (
                         <option key={device.deviceId} value={device.deviceId}>
@@ -305,12 +333,13 @@ const response = await getInterviewDetails(interviewId);
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
                   >
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Microphone:</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Microphone</label>
                     <select
                       value={localMediaSettings.audioDeviceId || ''}
                       onChange={(e) => handleDeviceChange('audio', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     >
                       {mediaDevices.audio.map(device => (
                         <option key={device.deviceId} value={device.deviceId}>
@@ -327,12 +356,12 @@ const response = await getInterviewDetails(interviewId);
 
         {/* Right Panel - Uses data from backend APIs */}
         <motion.div 
-          className="bg-white rounded-2xl shadow-lg p-6"
+          className="bg-white rounded-2xl shadow-md p-6 md:p-8"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
         >
-          <div className="space-y-6">
+          <div className="space-y-6 md:space-y-8">
             {/* Role Selection for New Interview */}
             <AnimatePresence>
               {!isExistingInterview && (
@@ -341,24 +370,24 @@ const response = await getInterviewDetails(interviewId);
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">Select Your Role</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 tracking-tight">Select Your Role</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {availableRoles.map((role) => (
+                    {availableRoles.map((role, roleIdx) => (
                       <motion.div
-                        key={role.value}
-                        whileHover={{ scale: 1.02, y: -2 }}
+                        key={role.value ?? `role-${roleIdx}`}
+                        whileHover={{ scale: 1.02, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                         whileTap={{ scale: 0.98 }}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        className={`p-4 md:p-5 rounded-xl border cursor-pointer transition-all ${
                           selectedRole === role.value 
-                            ? 'border-blue-500 bg-blue-50 shadow-md' 
+                            ? 'border-blue-500 bg-blue-50 shadow-sm' 
                             : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                         }`}
                         onClick={() => handleRoleSelect(role.value)}
                       >
-                        <div className="text-2xl mb-2">{role.icon}</div>
-                        <h3 className="font-semibold text-gray-800 mb-1">{role.label}</h3>
-                        <p className="text-sm text-gray-600">
+                        <h3 className="font-semibold text-gray-900 mb-1 text-base md:text-lg">{role.label}</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">
                           {role.value === 'frontend' && 'React, Vue, Angular, UI/UX'}
                           {role.value === 'backend' && 'Node.js, Python, APIs, Databases'}
                           {role.value === 'fullstack' && 'End-to-end development'}
@@ -379,30 +408,31 @@ const response = await getInterviewDetails(interviewId);
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">Interview Progress</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 tracking-tight">Interview Progress</h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-gray-50 p-4 rounded-lg text-center">
                       <span className="block text-sm text-gray-600 mb-1">Current Round</span>
-                      <span className="text-xl font-bold text-gray-800">
+                      <span className="text-xl font-bold text-gray-900">
                         {interview.currentRound} of {interview.totalRounds || 3}
                       </span>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg text-center">
                       <span className="block text-sm text-gray-600 mb-1">Status</span>
-                      <span className={`text-sm font-semibold px-2 py-1 rounded-full ${
+                      <span className={`text-sm font-medium px-3 py-1 rounded-full ${
                         interview.status === 'active' 
-                          ? 'bg-green-100 text-green-600' 
-                          : 'bg-blue-100 text-blue-600'
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {interview.status}
+                        {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                       </span>
                     </div>
                     {getOverallScore() && (
                       <div className="bg-gray-50 p-4 rounded-lg text-center">
                         <span className="block text-sm text-gray-600 mb-1">Overall Score</span>
-                        <span className="text-xl font-bold text-green-600">
+                        <span className="text-xl font-bold text-green-700">
                           {getOverallScore()}/10
                         </span>
                       </div>
@@ -411,24 +441,24 @@ const response = await getInterviewDetails(interviewId);
 
                   {/* Rounds Overview - Data from backend */}
                   <div className="rounds-overview">
-                    <h3 className="font-semibold text-gray-800 mb-3">Rounds</h3>
-                    <div className="grid grid-cols-1 gap-3">
+                    <h3 className="font-semibold text-gray-900 mb-3 text-base md:text-lg tracking-tight">Rounds Overview</h3>
+                    <div className="space-y-3">
                       {interview.rounds?.map((round, index) => (
                         <motion.div
                           key={index}
-                          whileHover={{ scale: 1.02 }}
+                          whileHover={{ scale: 1.01, boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)' }}
                           className="bg-gray-50 p-4 rounded-lg border border-gray-200"
                         >
                           <div className="flex justify-between items-center mb-2">
-                            <span className="font-semibold text-gray-800">
+                            <span className="font-semibold text-gray-900 text-sm md:text-base">
                               Round {round.roundNumber}
                             </span>
-                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                               round.status === 'completed' 
-                                ? 'bg-green-100 text-green-600' 
-                                : 'bg-yellow-100 text-yellow-600'
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-yellow-100 text-yellow-700'
                             }`}>
-                              {round.status}
+                              {round.status.charAt(0).toUpperCase() + round.status.slice(1)}
                             </span>
                           </div>
                           {round.status === 'completed' && (
@@ -448,28 +478,25 @@ const response = await getInterviewDetails(interviewId);
             </AnimatePresence>
 
             {/* Start Button */}
-            <motion.div className="action-section pt-4 border-t border-gray-200">
+            <motion.div className="action-section pt-4 md:pt-6 border-t border-gray-200">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all ${
+                className={`w-full py-4 px-6 rounded-xl font-medium text-base md:text-lg transition-all ${
                   isLoading || (!isExistingInterview && !selectedRole)
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md'
                 }`}
                 onClick={handleStartInterview}
                 disabled={isLoading || (!isExistingInterview && !selectedRole)}
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Preparing...
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>🚀</span>
-                    {isExistingInterview ? 'Continue Interview' : 'Start Interview'}
-                  </div>
+                  isExistingInterview ? 'Continue Interview' : 'Start Interview'
                 )}
               </motion.button>
               

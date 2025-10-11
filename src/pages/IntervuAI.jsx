@@ -3,8 +3,9 @@ import { motion, useInView, useAnimation, AnimatePresence } from 'framer-motion'
 import { 
   Video, Zap, Calendar, Play, Clock, Award, 
   TrendingUp, Star, ChevronRight, Sparkles,
-  MessageSquare, Target, Brain, ChevronLeft,
-  BarChart3, RotateCcw, Plus, ChevronDown
+  Brain, ChevronLeft, BarChart3, Plus, ChevronDown,
+  ArrowRight, CheckCircle2, Circle, Users,
+  Target, MessageCircle, FileText
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getUserInterviews, getInterviewStats } from '../services/interviewService';
@@ -12,7 +13,6 @@ import { useUserInterviewStore } from '../store/interviewStore';
 
 export default function IntervuAI() {
   const [userName] = useState('Guna');
-  const [hoveredCard, setHoveredCard] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeInterviews, setActiveInterviews] = useState([]);
@@ -24,58 +24,83 @@ export default function IntervuAI() {
   const navigate = useNavigate();
   const { availableRoles } = useUserInterviewStore();
 
-  const sessionsRef = useRef(null);
   const feedbackRef = useRef(null);
-  const statsInView = useInView(sessionsRef, { once: true, margin: '-100px' });
-  const feedbackInView = useInView(feedbackRef, { once: true, margin: '-100px' });
-  const sessionsControls = useAnimation();
+  const feedbackInView = useInView(feedbackRef, { once: true, margin: '-50px' });
   const feedbackControls = useAnimation();
 
   useEffect(() => {
-    if (statsInView) sessionsControls.start('visible');
     if (feedbackInView) feedbackControls.start('visible');
-  }, [statsInView, feedbackInView, sessionsControls, feedbackControls]);
+  }, [feedbackInView, feedbackControls]);
 
-  // Load data from backend
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Load interviews and stats in parallel
-      const [interviewsResponse, statsResponse] = await Promise.all([
-        getUserInterviews({ 
-          sortBy: 'lastActiveAt', 
-          order: 'desc',
-          limit: 10 
-        }),
-        getInterviewStats()
-      ]);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [interviewsResponse, statsResponse] = await Promise.all([
+          getUserInterviews({ 
+            sortBy: 'lastActiveAt', 
+            order: 'desc',
+            limit: 10 
+          }).catch(err => {
+            console.warn('Failed to load interviews:', err);
+            return { interviews: [] };
+          }),
+          getInterviewStats().catch(err => {
+            console.warn('Failed to load stats:', err);
+            return {};
+          })
+        ]);
 
-      const interviews = interviewsResponse.interviews || [];
-      setAllInterviews(interviews);
-      
-      // Filter active interviews
-      const active = interviews.filter(interview => interview.status === 'active');
-      setActiveInterviews(active);
-      
-      setStats(statsResponse || {});
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
+        const interviews = interviewsResponse.interviews || [];
+        setAllInterviews(interviews);
+        const active = interviews.filter(interview => interview.status === 'active');
+        setActiveInterviews(active);
+        setStats(statsResponse || {});
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setAllInterviews([]);
+        setActiveInterviews([]);
+        setStats({});
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
     }
   };
 
-  loadData();
-}, []);
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, scale: 0.95 },
     visible: (i) => ({ 
       opacity: 1, 
-      y: 0, 
-      transition: { delay: i * 0.1, duration: 0.5, ease: 'easeOut' } 
+      scale: 1,
+      transition: { 
+        delay: i * 0.1, 
+        duration: 0.4,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      } 
     }),
   };
 
@@ -104,7 +129,6 @@ useEffect(() => {
     return Math.round((completedRounds / interview.totalRounds) * 100);
   };
 
-
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -122,15 +146,7 @@ useEffect(() => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const dayNames = [
-    { short: 'S', full: 'Sunday' },
-    { short: 'M', full: 'Monday' },
-    { short: 'T', full: 'Tuesday' },
-    { short: 'W', full: 'Wednesday' },
-    { short: 'T', full: 'Thursday' },
-    { short: 'F', full: 'Friday' },
-    { short: 'S', full: 'Saturday' }
-  ];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const changeMonth = (delta) => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
@@ -165,283 +181,444 @@ useEffect(() => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-3 border-blue-200 border-t-blue-500 rounded-full mx-auto mb-4"
+          />
+          <p className="text-slate-600 font-medium">Loading your dashboard...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <main className="p-4 md:p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-6xl mx-auto">
-        {/* Hero Section */}
-        <div className="mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <p className="text-xs text-gray-500 mb-1">Welcome back, {userName} ⭐</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">IntervuAI</h1>
-            <p className="text-sm text-gray-600">AI-powered interview preparation platform</p>
-          </motion.div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+      {/* Subtle Background Pattern */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-10 w-72 h-72 bg-blue-200/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-10 w-96 h-96 bg-cyan-200/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-200/5 rounded-full blur-3xl" />
+      </div>
 
-        {/* Performance Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+        {/* Header */}
+        <motion.header
+          initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-100 mb-6"
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="mb-8 lg:mb-12"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-800">Your Progress</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-white rounded-lg p-3 shadow-sm">
-              <p className="text-xs text-gray-600 mb-1">Total Sessions</p>
-              <p className="text-xl font-bold text-gray-800">{stats.totalInterviews || 0}</p>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 5 }}
+                  className="w-2 h-2 bg-blue-500 rounded-full"
+                />
+                <span className="text-slate-600 text-sm font-medium">Welcome back, {userName}! 👋</span>
+              </div>
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold text-blue-600 tracking-tight">
+                  Interview Dashboard
+                </h1>
+                <p className="text-slate-500 mt-2 max-w-2xl">
+                  Track your progress, continue practicing, and master your interview skills
+                </p>
+              </div>
             </div>
-            <div className="bg-white rounded-lg p-3 shadow-sm">
-              <p className="text-xs text-gray-600 mb-1">Avg Score</p>
-              <p className="text-xl font-bold text-green-600">{stats.averageScore || 0}%</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 shadow-sm">
-              <p className="text-xs text-gray-600 mb-1">Active Interviews</p>
-              <p className="text-xl font-bold text-blue-600">{activeInterviews.length}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 shadow-sm">
-              <p className="text-xs text-gray-600 mb-1">Completion Rate</p>
-              <p className="text-xl font-bold text-orange-600">{stats.completionRate || 0}%</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Active Interviews Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mb-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">Active Interviews</h2>
-            <div className="flex gap-2">
-              {activeInterviews.length > 2 && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowAllInterviews(!showAllInterviews)}
-                  className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-50"
-                >
-                  {showAllInterviews ? 'Show Less' : `Show All (${activeInterviews.length})`}
-                  <ChevronDown className={`w-3 h-3 transition-transform ${showAllInterviews ? 'rotate-180' : ''}`} />
-                </motion.button>
-              )}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleNewInterview}
-                className="text-xs text-white font-semibold flex items-center gap-1 px-3 py-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600"
-              >
-                <Plus className="w-3 h-3" />
+            
+            <motion.button
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleNewInterview}
+              className="group relative bg-white/80 backdrop-blur-sm border border-blue-200 text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300 w-fit"
+            >
+              <span className="relative flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" />
                 New Interview
-              </motion.button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {displayedInterviews.map((interview, index) => (
-              <motion.div
-                key={interview.interviewId}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="bg-white rounded-xl p-4 shadow-md border border-gray-100 hover:shadow-lg transition-all group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-bold text-gray-800 text-sm mb-1">{interview.role}</h3>
-                    <p className="text-xs text-gray-500">Interview ID: {interview.interviewId}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      interview.status === 'active' 
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-blue-100 text-blue-600'
-                    }`}>
-                      {interview.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-1">Current Round</p>
-                    <p className="text-sm font-bold text-gray-800">
-                      {interview.currentRound} of {interview.totalRounds}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-1">Progress</p>
-                    <p className="text-sm font-bold text-blue-600">
-                      {getProgressPercentage(interview)}%
-                    </p>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${getProgressPercentage(interview)}%` }}
-                  ></div>
-                </div>
-
-                <div className="flex gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleContinueInterview(interview)}
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Continue
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex-1 bg-gray-100 text-gray-700 text-xs font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1 hover:bg-gray-200"
-                  >
-                    <BarChart3 className="w-3 h-3" />
-                    Analytics
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))}
-
-            {/* New Interview Card */}
-            {activeInterviews.length < 4 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * (displayedInterviews.length + 1) }}
-                className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-dashed border-blue-200 hover:border-blue-300 transition-all cursor-pointer group"
-                onClick={handleNewInterview}
-              >
-                <div className="flex flex-col items-center justify-center h-full min-h-[120px] text-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                    <Plus className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="font-bold text-blue-600 text-sm mb-1">Start New Interview</h3>
-                  <p className="text-xs text-blue-500">Begin a new practice session</p>
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Rest of the content remains similar but with real data */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Session Types & Recent Sessions */}
-          <div className="lg:col-span-2 space-y-6">
-           
-
-            {/* Recent Sessions */}
-           {allInterviews.length > 0 && (
-    <motion.div ref={feedbackRef}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-800">Recent Sessions</h2>
-        <button className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1">
-          View All
-          <ChevronRight className="w-3 h-3" />
-        </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {allInterviews.slice(0, 3).map((interview, idx) => (
-          <motion.div
-            key={interview.interviewId}
-            variants={cardVariants}
-            initial="hidden"
-            animate={feedbackControls}
-            custom={idx}
-            className="bg-white rounded-lg p-3 shadow-md border border-gray-100 hover:shadow-lg transition-all cursor-pointer group"
-            whileHover={{ y: -2 }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                <Video className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                <span className="text-xs font-bold text-gray-800">
-                  {getOverallScore(interview)}%
-                </span>
-              </div>
-            </div>
-            <h3 className="text-xs font-bold text-gray-800 mb-1">{interview.role}</h3>
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Round {interview.currentRound}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </span>
-              <span>•</span>
-              <span>{new Date(interview.createdAt).toLocaleDateString()}</span>
-            </div>
-            <div className="pt-2 border-t border-gray-100">
-              <p className="text-xs text-gray-600 flex items-center gap-1">
-                <Award className="w-3 h-3 text-blue-500" />
-                {interview.status === 'completed' ? 'Completed' : 'In Progress'}
-              </p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </motion.div>
-  )}
+            </motion.button>
           </div>
+        </motion.header>
 
-          {/* Right Column: Calendar */}
-          <div className="lg:col-span-1">
-            <motion.div
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          {/* Left Column - Main Content */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Stats Overview */}
+            {allInterviews.length > 0 && (
+              <motion.section
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-2 md:grid-cols-4 gap-4"
+              >
+                {[
+                  { 
+                    label: 'Total Interviews', 
+                    value: stats.totalInterviews || 0, 
+                    icon: FileText,
+                    color: 'blue' 
+                  },
+                  { 
+                    label: 'Avg Score', 
+                    value: `${stats.averageScore || 0}%`, 
+                    icon: TrendingUp,
+                    color: 'emerald' 
+                  },
+                  { 
+                    label: 'Active', 
+                    value: activeInterviews.length, 
+                    icon: Zap,
+                    color: 'violet' 
+                  },
+                  { 
+                    label: 'Completion', 
+                    value: `${stats.completionRate || 0}%`, 
+                    icon: CheckCircle2,
+                    color: 'amber' 
+                  }
+                ].map((stat, index) => (
+                  <motion.div
+                    key={stat.label}
+                    variants={itemVariants}
+                    custom={index}
+                    whileHover={{ y: -2 }}
+                    className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 border border-slate-200/60 shadow-xs hover:shadow-sm transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-500 text-sm font-medium mb-1">{stat.label}</p>
+                        <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                      </div>
+                      <div className={`p-2 rounded-lg bg-${stat.color}-50 text-${stat.color}-600`}>
+                        <stat.icon className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.section>
+            )}
+
+            {/* Active Interviews Section */}
+            <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="bg-white rounded-lg p-3 shadow-md border border-gray-100 max-w-xs aspect-square"
+              transition={{ delay: 0.3 }}
+              className="bg-white/70 backdrop-blur-sm rounded-3xl border border-slate-200/60 shadow-xs p-6"
             >
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 mb-1">
+                    {activeInterviews.length > 0 ? 'Continue Practicing' : 'Start Your Journey'}
+                  </h2>
+                  <p className="text-slate-500 text-sm">
+                    {activeInterviews.length > 0 
+                      ? 'Pick up where you left off and keep improving'
+                      : 'Begin your first mock interview with AI feedback'
+                    }
+                  </p>
+                </div>
+                {activeInterviews.length > 2 && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowAllInterviews(!showAllInterviews)}
+                    className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors"
+                  >
+                    {showAllInterviews ? 'Show Less' : `View All (${activeInterviews.length})`}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showAllInterviews ? 'rotate-180' : ''}`} />
+                  </motion.button>
+                )}
+              </div>
+
+              {/* Empty State */}
+              <AnimatePresence>
+                {activeInterviews.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={handleNewInterview}
+                    className="group cursor-pointer text-center py-12 px-6 rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-400 transition-all duration-300 bg-gradient-to-br from-white to-blue-50/50"
+                  >
+                    <motion.div
+                      animate={{ y: [0, -8, 0] }}
+                      transition={{ duration: 4, repeat: Infinity }}
+                      className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl mb-6 shadow-lg shadow-blue-500/25"
+                    >
+                      <MessageCircle className="w-8 h-8 text-white" />
+                    </motion.div>
+                    
+                    <h3 className="text-2xl font-bold text-slate-900 mb-3">
+                      Ready to Begin Your Journey?
+                    </h3>
+                    <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
+                      Start your first AI-powered mock interview and receive personalized feedback to help you improve and succeed.
+                    </p>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="inline-flex items-center gap-3 bg-gradient-to-br from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all"
+                    >
+                      <Play className="w-4 h-4" />
+                      Start First Interview
+                    </motion.button>
+
+                    {availableRoles && availableRoles.length > 0 && (
+                      <div className="mt-10 pt-8 border-t border-slate-200">
+                        <p className="text-slate-500 text-sm mb-4 font-medium">Popular interview tracks:</p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {availableRoles.slice(0, 4).map((role, idx) => (
+                            <motion.span
+                              key={idx}
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.5 + idx * 0.1 }}
+                              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                            >
+                              {role.label || role.value || role.name || 'Role'}
+                            </motion.span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ) : (
+                  /* Active Interview Cards */
+                  <motion.div 
+                    className="space-y-4"
+                    layout
+                  >
+                    <AnimatePresence>
+                      {displayedInterviews.map((interview, index) => (
+                        <motion.div
+                          key={interview.interviewId}
+                          layout
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ delay: index * 0.1, duration: 0.4 }}
+                          whileHover={{ y: -2 }}
+                          className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300"
+                        >
+                          <div className="flex flex-col lg:flex-row lg:items-start gap-5">
+                            {/* Interview Info */}
+                            <div className="flex-1 space-y-4">
+                              <div className="flex items-start gap-4">
+                                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+                                  <Users className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-lg font-semibold text-slate-900 mb-1 truncate">
+                                    {interview.role}
+                                  </h3>
+                                  <p className="text-slate-500 text-sm">Interview ID: {interview.interviewId}</p>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                      interview.status === 'active' 
+                                        ? 'bg-emerald-100 text-emerald-700' 
+                                        : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      <Circle className="w-1.5 h-1.5 fill-current" />
+                                      {interview.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Progress Stats */}
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                                  <p className="text-slate-500 text-xs font-medium mb-1">Round</p>
+                                  <p className="text-lg font-bold text-slate-900">
+                                    {interview.currentRound}
+                                    <span className="text-slate-400 text-sm font-normal">/{interview.totalRounds}</span>
+                                  </p>
+                                </div>
+                                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                                  <p className="text-slate-500 text-xs font-medium mb-1">Progress</p>
+                                  <p className="text-lg font-bold text-blue-600">
+                                    {getProgressPercentage(interview)}%
+                                  </p>
+                                </div>
+                                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                                  <p className="text-slate-500 text-xs font-medium mb-1">Score</p>
+                                  <p className="text-lg font-bold text-emerald-600">
+                                    {getOverallScore(interview)}%
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Progress Bar */}
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-slate-500">Progress</span>
+                                  <span className="text-slate-700 font-medium">{getProgressPercentage(interview)}%</span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${getProgressPercentage(interview)}%` }}
+                                    transition={{ duration: 1, ease: "easeOut", delay: 0.3 + index * 0.1 }}
+                                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex gap-3 pt-2">
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => handleContinueInterview(interview)}
+                                  className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                                >
+                                  <Play className="w-4 h-4" />
+                                  Continue Practice
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-semibold py-3 px-4 rounded-lg hover:bg-slate-200 transition-colors"
+                                >
+                                  <BarChart3 className="w-4 h-4" />
+                                  <span className="hidden sm:inline">Details</span>
+                                </motion.button>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.section>
+
+            {/* Recent Activity */}
+            {allInterviews.length > 0 && (
+              <motion.section
+                ref={feedbackRef}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-white/70 backdrop-blur-sm rounded-3xl border border-slate-200/60 shadow-xs p-6"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-1">Recent Activity</h2>
+                    <p className="text-slate-500 text-sm">Your latest interview sessions and progress</p>
+                  </div>
+                  <button className="flex items-center gap-2 text-blue-600 text-sm font-semibold hover:text-blue-700 transition-colors">
+                    View All
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {allInterviews.slice(0, 3).map((interview, idx) => (
+                    <motion.div
+                      key={interview.interviewId}
+                      variants={cardVariants}
+                      initial="hidden"
+                      animate={feedbackControls}
+                      custom={idx}
+                      whileHover={{ y: -4 }}
+                      className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
+                          <Video className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                          <span className="text-sm font-bold text-slate-900">
+                            {getOverallScore(interview)}%
+                          </span>
+                        </div>
+                      </div>
+                      <h3 className="font-semibold text-slate-900 mb-2 truncate">{interview.role}</h3>
+                      <div className="flex items-center gap-2 text-slate-500 text-xs mb-3">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Round {interview.currentRound}</span>
+                        <span>•</span>
+                        <span>{new Date(interview.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="pt-3 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                            interview.status === 'completed' 
+                              ? 'bg-emerald-100 text-emerald-700' 
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {interview.status}
+                          </span>
+                          <Award className="w-4 h-4 text-slate-400" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
+          </div>
+
+          {/* Right Column - Sidebar */}
+          <div className="xl:col-span-1 space-y-6">
+            {/* Calendar Widget */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 border border-slate-200/60 shadow-xs sticky top-6"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-blue-500" />
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </h2>
+                </h3>
                 <div className="flex gap-1">
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => changeMonth(-1)}
-                    className="p-1 rounded-md hover:bg-gray-100"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4 text-slate-600" />
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => changeMonth(1)}
-                    className="p-1 rounded-md hover:bg-gray-100"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-4 h-4 text-slate-600" />
                   </motion.button>
                 </div>
               </div>
-              <div className="grid grid-cols-7 gap-1 text-xs">
-                {dayNames.map((day, index) => (
-                  <div key={day.full} className="text-center font-semibold text-gray-500 py-1">
-                    {day.short}
+
+              <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                {dayNames.map((day) => (
+                  <div key={day} className="text-slate-500 text-xs font-medium py-2">
+                    {day.slice(0, 1)}
                   </div>
                 ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: startingDayOfWeek }).map((_, idx) => (
-                  <div key={`empty-${idx}`} className="h-6"></div>
+                  <div key={`empty-${idx}`} className="aspect-square" />
                 ))}
                 {Array.from({ length: daysInMonth }).map((_, idx) => {
                   const day = idx + 1;
@@ -451,12 +628,12 @@ useEffect(() => {
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
-                      className={`h-6 rounded-md flex items-center justify-center text-xs font-medium transition-all ${
+                      className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all ${
                         isToday(day)
-                          ? 'bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-md'
+                          ? 'bg-blue-500 text-white shadow-md'
                           : isSelected(day)
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'hover:bg-gray-100 text-gray-700'
+                          ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-500'
+                          : 'text-slate-700 hover:bg-slate-100'
                       }`}
                     >
                       {day}
@@ -465,9 +642,70 @@ useEffect(() => {
                 })}
               </div>
             </motion.div>
+
+            {/* Quick Stats */}
+            {allInterviews.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-5 text-white shadow-lg"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="font-semibold mb-1">Progress Summary</h3>
+                    <p className="text-blue-100 text-sm opacity-90">Keep up the great work!</p>
+                  </div>
+                  <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  <div className="flex items-center justify-between py-2 border-b border-white/20">
+                    <span className="text-blue-100 text-sm">This Week</span>
+                    <span className="font-semibold">{Math.min(activeInterviews.length, 3)} sessions</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-blue-100 text-sm">Total Practice</span>
+                    <span className="font-semibold">{stats.totalInterviews * 30 || 0} min</span>
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleNewInterview}
+                  className="w-full bg-white text-blue-600 font-semibold py-2.5 px-4 rounded-lg hover:shadow-md transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Session
+                </motion.button>
+              </motion.div>
+            )}
+
+            {/* Motivation Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 border border-slate-200/60 shadow-xs"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-lg shadow-amber-500/25">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-2">Daily Insight</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed italic">
+                    "The expert in anything was once a beginner. Every interview is a step toward mastery."
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -27,7 +27,15 @@ export const useUserInterviewStore = create(
       
       // Actions
       setCurrentInterviewId: (interviewId) => set({ currentInterviewId: interviewId }),
-      
+
+  setCurrentInterviewId: (id) => set({ currentInterviewId: id }),
+  cacheInterview: (interview) => set((state) => {
+    const newCache = new Map(state.interviewsCache); // Create a new Map to ensure immutability
+    newCache.set(interview.interviewId, interview);
+    return { interviewsCache: newCache };
+  }),
+  getCachedInterview: (interviewId) => get().interviewsCache.get(interviewId),
+
       setMediaSettings: (settings) => set((state) => ({
         mediaSettings: { ...state.mediaSettings, ...settings }
       })),

@@ -1,4 +1,3 @@
-// Modified InterviewPage.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -10,12 +9,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import LiveInterview from '../components/InterviewRoom/LiveInterview';
 import { useUserInterviewStore } from '../store/interviewStore';
-import { generateAnswerFeedback, completeRound, startInterview, generatePreparedQuestion,generateContextualFollowUp } from '../services/interviewService';
+import { generateAnswerFeedback, completeRound, startInterview, generatePreparedQuestion, generateContextualFollowUp } from '../services/interviewService';
 
 export default function InterviewPage() {
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [interviewStage, setInterviewStage] = useState('ready'); // ready, in-progress, completed
+  const [interviewStage, setInterviewStage] = useState('ready');
   const [responses, setResponses] = useState([]);
   const [currentRound, setCurrentRound] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
@@ -30,7 +29,6 @@ export default function InterviewPage() {
     interviewId: null
   });
 
-  // Get data from store
   const { 
     currentInterviewId, 
     availableRoles,
@@ -40,185 +38,187 @@ export default function InterviewPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-  // Close sidebar when component mounts
-  window.dispatchEvent(new CustomEvent('closeSidebar'));
-  
-  // Initialize interview if not already set
-  if (!currentInterviewId) {
-    const newInterviewId = `interview_${Date.now()}`;
-    setCurrentInterviewId(newInterviewId);
-    setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
-  } else {
-    setInterviewData(prev => ({ ...prev, interviewId: currentInterviewId }));
-  }
-}, [currentInterviewId, setCurrentInterviewId]);
+    window.dispatchEvent(new CustomEvent('closeSidebar'));
+    
+    if (!currentInterviewId) {
+      const newInterviewId = `interview_${Date.now()}`;
+      setCurrentInterviewId(newInterviewId);
+      setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
+    } else {
+      setInterviewData(prev => ({ ...prev, interviewId: currentInterviewId }));
+    }
+  }, [currentInterviewId, setCurrentInterviewId]);
 
-const handleUserResponse = async (transcript) => {
-  if (!transcript || transcript.trim().length === 0) return;
-  
-  setLoading(true);
-  
-  try {
-    const newResponse = {
-      id: Date.now(),
-      question: currentQuestion,
-      answer: transcript,
-      timestamp: new Date().toISOString(),
-      score: 0,
-      feedback: '',
-      status: 'processing',
-      questionType: currentQuestionType
-    };
-    
-    setResponses(prev => [...prev, newResponse]);
-    
-    const feedbackData = await generateAnswerFeedback(
-      currentQuestion,
-      transcript,
-      currentInterviewId,
-      currentRound
-    );
-    
-    setResponses(prev => 
-      prev.map(response => 
-        response.id === newResponse.id 
-          ? { 
-              ...response, 
-              score: feedbackData.score || 7,
-              feedback: feedbackData.feedback || 'Good response, could use more detail.',
-              summary: feedbackData.summary || transcript.substring(0, 100) + '...',
-              status: 'completed'
-            }
-          : response
-      )
-    );
-    
-    const questionData = {
-      question: currentQuestion,
-      answer: transcript,
-      score: feedbackData.score || 7,
-      feedback: feedbackData.feedback,
-      summary: feedbackData.summary,
-      timestamp: new Date().toISOString(),
-      questionType: currentQuestionType
-    };
-    
-    setRoundQuestions(prev => [...prev, questionData]);
-    
-    if (feedbackData.needsFollowUp) {
+  const generateNextQuestion = async () => {
+    try {
       const previousQuestions = roundQuestions.map(q => ({
         question: q.question,
         answer: q.answer,
-        feedback: q.feedback
+        feedback: q.feedback,
+        score: q.score
       }));
-      const followUpResponse = await generateContextualFollowUp(
-        currentInterviewId,
-        currentRound,
-        currentQuestion,
-        transcript,
-        previousQuestions,
-        feedbackData,
-        feedbackData.followUpType
-      );
-      setCurrentQuestion(followUpResponse.data.question);
-      setCurrentQuestionType('followup');
-    } else if (roundQuestions.length < 5) {
-      await generateNextQuestion();
-    } else {
-      await completeCurrentRound();
-    }
-  } catch (error) {
-    console.error('Error processing response:', error);
-    // Basic error handling
-    setResponses(prev =>
-      prev.map(response =>
-        response.status === 'processing'
-          ? { ...response, status: 'error', feedback: 'Error processing response' }
-          : response
-      )
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
- const generateNextQuestion = async () => {
-  try {
-    const previousQuestions = roundQuestions.map(q => ({
-      question: q.question,
-      answer: q.answer,
-      feedback: q.feedback,
-      score: q.score
-    }));
-    const response = await generatePreparedQuestion(currentInterviewId, currentRound, previousQuestions);
-    
-    if (response.data && response.data.question) {
-      setCurrentQuestion(response.data.question);
-      setCurrentQuestionType('prepared');
-    } else {
-      // Fallback questions if API fails
+      const response = await generatePreparedQuestion(currentInterviewId, currentRound, previousQuestions);
+      
+      if (response.data && response.data.question) {
+        setCurrentQuestion(response.data.question);
+        setCurrentQuestionType('prepared');
+      } else {
+        const fallbackQuestions = [
+          "Can you explain how the Virtual DOM works in React and its performance benefits?",
+          "What are the key differences between useMemo and useCallback in React?",
+          "How do you manage state in a large-scale React application?",
+          "What is the difference between controlled and uncontrolled components in React?",
+          "How would you optimize a React application's rendering performance?"
+        ];
+        const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
+        setCurrentQuestion(nextQuestion);
+        setCurrentQuestionType('prepared');
+      }
+      
+      setIsPlaying(true);
+      setTimeout(() => setIsPlaying(false), 2000);
+    } catch (error) {
+      console.error('Error generating next question:', error);
       const fallbackQuestions = [
         "Can you explain how the Virtual DOM works in React and its performance benefits?",
         "What are the key differences between useMemo and useCallback in React?",
-        "How do you manage state in a large-scale React application?",
-        "What is the difference between controlled and uncontrolled components in React?",
-        "How would you optimize a React application's rendering performance?"
+        "How do you manage state in a large-scale React application?"
       ];
       const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
       setCurrentQuestion(nextQuestion);
       setCurrentQuestionType('prepared');
+      
+      setIsPlaying(true);
+      setTimeout(() => setIsPlaying(false), 2000);
     }
-    
-    setIsPlaying(true);
-    setTimeout(() => setIsPlaying(false), 2000);
-  } catch (error) {
-    console.error('Error generating next question:', error);
-    // Fallback questions
-    const fallbackQuestions = [
-      "Can you explain how the Virtual DOM works in React and its performance benefits?",
-      "What are the key differences between useMemo and useCallback in React?",
-      "How do you manage state in a large-scale React application?"
-    ];
-    const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
-    setCurrentQuestion(nextQuestion);
-    setCurrentQuestionType('prepared');
-    
-    setIsPlaying(true);
-    setTimeout(() => setIsPlaying(false), 2000);
-  }
-};
+  };
 
-const completeCurrentRound = async () => {
-  try {
+  const handleUserResponse = async (transcript) => {
+    if (!transcript || transcript.trim().length === 0) return;
+    
     setLoading(true);
     
-    const roundScore = roundQuestions.reduce((sum, q) => sum + q.score, 0) / roundQuestions.length;
-    const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? 'Excellent performance!' : 'Good technical knowledge demonstrated.'}`;
-    
-    await completeRound(
-      currentInterviewId, 
-      currentRound, 
-      roundQuestions, 
-      roundFeedback
-    );
-    
-    if (currentRound < interviewData.totalRounds) {
-      setShowRoundComplete(true);
-    } else {
-      setInterviewStage('completed');
+    try {
+      const newResponse = {
+        id: Date.now(),
+        question: currentQuestion,
+        answer: transcript,
+        timestamp: new Date().toISOString(),
+        score: 0,
+        feedback: '',
+        expectedAnswer: '', // Added
+        status: 'processing',
+        questionType: currentQuestionType
+      };
+      
+      setResponses(prev => [...prev, newResponse]);
+      
+      const feedbackData = await generateAnswerFeedback(
+        currentQuestion,
+        transcript,
+        currentInterviewId,
+        currentRound
+      );
+      
+      setResponses(prev => 
+        prev.map(response => 
+          response.id === newResponse.id 
+            ? { 
+                ...response, 
+                score: feedbackData.score || 7,
+                feedback: feedbackData.feedback || 'Good response, could use more detail.',
+                expectedAnswer: feedbackData.expectedAnswer || 'A complete response addressing the question.', // Added
+                summary: feedbackData.summary || transcript.substring(0, 100) + '...',
+                status: 'completed'
+              }
+            : response
+        )
+      );
+      
+      const questionData = {
+        question: currentQuestion,
+        answer: transcript,
+        score: feedbackData.score || 7,
+        feedback: feedbackData.feedback,
+        expectedAnswer: feedbackData.expectedAnswer || 'A complete response addressing the question.', // Added
+        summary: feedbackData.summary,
+        timestamp: new Date().toISOString(),
+        questionType: currentQuestionType
+      };
+      
+      setRoundQuestions(prev => [...prev, questionData]);
+      
+      if (feedbackData.needsFollowUp) {
+        const previousQuestions = roundQuestions.map(q => ({
+          question: q.question,
+          answer: q.answer,
+          feedback: q.feedback
+        }));
+        const followUpResponse = await generateContextualFollowUp(
+          currentInterviewId,
+          currentRound,
+          currentQuestion,
+          transcript,
+          previousQuestions,
+          feedbackData,
+          feedbackData.followUpType
+        );
+        setCurrentQuestion(followUpResponse.data.question);
+        setCurrentQuestionType('followup');
+      } else if (roundQuestions.length < 5) {
+        await generateNextQuestion();
+      } else {
+        await completeCurrentRound();
+      }
+    } catch (error) {
+      console.error('Error processing response:', error);
+      setResponses(prev =>
+        prev.map(response =>
+          response.status === 'processing'
+            ? { 
+                ...response, 
+                status: 'error', 
+                feedback: 'Error processing response',
+                expectedAnswer: 'A complete response addressing the question.' // Added
+              }
+            : response
+        )
+      );
+    } finally {
+      setLoading(false);
     }
-    
-  } catch (error) {
-    console.error('Error completing round:', error);
-    if (currentRound < interviewData.totalRounds) {
-      setShowRoundComplete(true);
-    } else {
-      setInterviewStage('completed');
+  };
+
+  const completeCurrentRound = async () => {
+    try {
+      setLoading(true);
+      
+      const roundScore = roundQuestions.reduce((sum, q) => sum + q.score, 0) / roundQuestions.length;
+      const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? 'Excellent performance!' : 'Good technical knowledge demonstrated.'}`;
+      
+      await completeRound(
+        currentInterviewId, 
+        currentRound, 
+        roundQuestions, 
+        roundFeedback
+      );
+      
+      if (currentRound < interviewData.totalRounds) {
+        setShowRoundComplete(true);
+      } else {
+        setInterviewStage('completed');
+      }
+    } catch (error) {
+      console.error('Error completing round:', error);
+      if (currentRound < interviewData.totalRounds) {
+        setShowRoundComplete(true);
+      } else {
+        setInterviewStage('completed');
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleContinueRound = () => {
     setShowRoundComplete(false);

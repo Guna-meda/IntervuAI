@@ -22,7 +22,7 @@ export default function IntervuAI() {
   const [showAllInterviews, setShowAllInterviews] = useState(false);
 
   const navigate = useNavigate();
-  const { availableRoles } = useUserInterviewStore();
+  const { availableRoles,currentInterviewId } = useUserInterviewStore();
 
   const feedbackRef = useRef(null);
   const feedbackInView = useInView(feedbackRef, { once: true, margin: '-50px' });
@@ -175,6 +175,10 @@ export default function IntervuAI() {
 
   const handleNewInterview = () => {
     navigate('/pre-interview');
+  };
+
+  const handleViewReport = (interviewId) => {
+    navigate('/view-report', { state: { interviewId } });
   };
 
   const displayedInterviews = showAllInterviews ? activeInterviews : activeInterviews.slice(0, 2);
@@ -490,6 +494,7 @@ export default function IntervuAI() {
                                 <motion.button
                                   whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}
+                                  onClick={() => handleViewReport(interview.interviewId)}
                                   className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-semibold py-3 px-4 rounded-lg hover:bg-slate-200 transition-colors"
                                 >
                                   <BarChart3 className="w-4 h-4" />

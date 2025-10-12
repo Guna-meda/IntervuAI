@@ -122,13 +122,14 @@ export const generateAnswerFeedback = async (question, answer, interviewId, roun
       method: 'POST',
       body: JSON.stringify({ question, answer, interviewId, roundNumber }),
     });
-    return response.data;
+    return response.data; // Includes expectedAnswer
   } catch (error) {
     console.error('Error generating feedback:', error);
     return {
       accuracy: "partial",
       summary: "Answer recorded",
       feedback: "Thank you for your response.",
+      expectedAnswer: "A complete and accurate response addressing the core concepts of the question.",
       needsFollowUp: false,
       followUpType: "none",
       score: 5

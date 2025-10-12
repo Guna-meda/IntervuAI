@@ -4,26 +4,24 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Helper function for API calls
 const apiCall = async (endpoint, options = {}) => {
-  let token = localStorage.getItem('token');
-
-  if (!token || token === 'null' || token === 'undefined') {
-    try {
-      if (auth?.currentUser) {
-        token = await auth.currentUser.getIdToken(true); // Force refresh
-        localStorage.setItem('token', token);
-      } else {
-        console.warn('No current user in Firebase auth for:', endpoint);
-        throw new Error('No authenticated user');
-      }
-    } catch (err) {
-      console.warn('Could not retrieve token:', err.message);
-      throw new Error('Authentication required');
+  let token;
+  try {
+    if (auth?.currentUser) {
+      token = await auth.currentUser.getIdToken(true); // Always get fresh token
+      localStorage.setItem('token', token);
+    } else {
+      throw new Error('No authenticated user');
     }
+  } catch (err) {
+    console.warn('Could not retrieve token:', err.message);
+    // Redirect to login page
+    window.location.href = '/login';
+    throw new Error('Authentication required');
   }
 
   const headers = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`, // Ensure token is always sent
+    Authorization: `Bearer ${token}`,
     ...options.headers,
   };
 
@@ -33,11 +31,17 @@ const apiCall = async (endpoint, options = {}) => {
   };
 
   try {
+   
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const text = await response.text();
+    // Try parse json if possible for clearer logs
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
+
     if (!response.ok) {
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
-    return await response.json();
+    return parsed;
   } catch (error) {
     console.error(`API call failed for ${endpoint}:`, error);
     throw error;
@@ -81,10 +85,10 @@ export const startInterview = async (interviewData) => {
 };
 
 // Generate prepared question
-export const generatePreparedQuestion = async (interviewId, roundNumber) => {
+export const generatePreparedQuestion = async (interviewId, roundNumber, previousQuestions = []) => {
   return apiCall('/llm/generate-prepared-question', {
     method: 'POST',
-    body: JSON.stringify({ interviewId, roundNumber }),
+    body: JSON.stringify({ interviewId, roundNumber, previousQuestions }),
   });
 };
 

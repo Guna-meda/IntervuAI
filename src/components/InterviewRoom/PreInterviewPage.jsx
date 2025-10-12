@@ -1,25 +1,15 @@
 // components/PreInterviewPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserInterviewStore } from '../../store/interviewStore';
-import { 
-  startInterview, 
-  getAllInterviews,
-  getInterviewDetails 
-} from '../../services/interviewService';
-import { auth } from '../../firebase/config'; // Import Firebase auth for user check
+import { startInterview, getAllInterviews, getInterviewDetails } from '../../services/interviewService';
+import { auth } from '../../firebase/config';
 
 const PreInterviewPage = ({ interviewId, onStartInterview }) => {
-  const {
-    mediaSettings,
-    setMediaSettings,
-    availableRoles,
-    setCurrentInterviewId,
-    cacheInterview,
-    getCachedInterview
-  } = useUserInterviewStore();
-  
+  const { mediaSettings, setMediaSettings, availableRoles, setCurrentInterviewId } =
+    useUserInterviewStore();
+
   const [selectedRole, setSelectedRole] = useState('');
   const [localMediaSettings, setLocalMediaSettings] = useState(mediaSettings);
   const [mediaDevices, setMediaDevices] = useState({ video: [], audio: [] });
@@ -29,34 +19,24 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
-  const isExistingInterview = !!interviewId;
+  const location = useLocation();
   const navigate = useNavigate();
+  const interviewIdFromState = location.state?.interviewId || interviewId;
+  const isExistingInterview = !!interviewIdFromState;
 
   // Load interview data from backend
   useEffect(() => {
     const loadInterviewData = async () => {
       if (isExistingInterview) {
         try {
-          // Try cache first
-          const cached = getCachedInterview(interviewId);
-          if (cached) {
-            setInterview(cached);
-          } else {
-            // Fetch from backend
-            const response = await getInterviewDetails(interviewId);
-            setInterview(response.interview);
-            try {
-              cacheInterview(response.interview);
-            } catch (cacheError) {
-              console.error('Error caching interview:', cacheError);
-            }
-          }
+          const response = await getInterviewDetails(interviewIdFromState);
+          setInterview(response.interview);
         } catch (error) {
           console.error('Error loading interview:', error);
           alert(`Failed to load interview: ${error.message || 'Please try again.'}`);
         }
       }
-      
+
       // Load user's interview history
       try {
         const response = await getAllInterviews();
@@ -67,25 +47,25 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
     };
 
     loadInterviewData();
-  }, [interviewId, isExistingInterview, getCachedInterview, cacheInterview]);
+  }, [interviewIdFromState, isExistingInterview]);
 
   // Camera setup
   useEffect(() => {
     const loadDevices = async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        const audioDevices = devices.filter(device => device.kind === 'audioinput');
-        
+        const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+        const audioDevices = devices.filter((device) => device.kind === 'audioinput');
+
         setMediaDevices({
           video: videoDevices,
-          audio: audioDevices
+          audio: audioDevices,
         });
       } catch (error) {
         console.error('Error loading media devices:', error);
       }
     };
-    
+
     loadDevices();
   }, []);
 
@@ -94,17 +74,25 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
       if (localMediaSettings.video || localMediaSettings.audio) {
         try {
           const constraints = {
-            video: localMediaSettings.video ? { 
-              deviceId: localMediaSettings.videoDeviceId ? { exact: localMediaSettings.videoDeviceId } : undefined 
-            } : false,
-            audio: localMediaSettings.audio ? {
-              deviceId: localMediaSettings.audioDeviceId ? { exact: localMediaSettings.audioDeviceId } : undefined
-            } : false
+            video: localMediaSettings.video
+              ? {
+                  deviceId: localMediaSettings.videoDeviceId
+                    ? { exact: localMediaSettings.videoDeviceId }
+                    : undefined,
+                }
+              : false,
+            audio: localMediaSettings.audio
+              ? {
+                  deviceId: localMediaSettings.audioDeviceId
+                    ? { exact: localMediaSettings.audioDeviceId }
+                    : undefined,
+                }
+              : false,
           };
 
           const stream = await navigator.mediaDevices.getUserMedia(constraints);
           streamRef.current = stream;
-          
+
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
@@ -118,7 +106,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
 
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, [localMediaSettings]);
@@ -135,46 +123,33 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
     }
 
     setIsLoading(true);
-    
-    try {
-      // Save media settings to store
-      setMediaSettings(localMediaSettings);
 
+    try {
+      setMediaSettings(localMediaSettings);
       let interviewData;
-      
+
       if (isExistingInterview) {
-        // Use existing interview data (already loaded from backend)
         interviewData = interview;
         setCurrentInterviewId(interview.interviewId);
       } else {
-        // Start NEW interview - call backend API
-        const roleData = availableRoles.find(r => r.value === selectedRole);
+        const roleData = availableRoles.find((r) => r.value === selectedRole);
         if (!roleData) {
           throw new Error('Selected role not found');
         }
-        
+
         const response = await startInterview({
           role: roleData.label,
-          totalRounds: 3
-          // Note: Do NOT send interviewId for new interviews; let backend generate it
+          totalRounds: 3,
         });
-        
+
         interviewData = response.interview;
         setCurrentInterviewId(interviewData.interviewId);
-        try {
-          cacheInterview(interviewData);
-        } catch (cacheError) {
-          console.error('Error caching interview:', cacheError);
-          // Continue despite cache error to avoid blocking the user
-        }
       }
 
-      // Pass to parent to start the actual interview
       if (typeof onStartInterview === 'function') {
         onStartInterview(interviewData);
       }
 
-      // Navigate to the InterviewPage
       navigate('/interviewPage');
     } catch (error) {
       console.error('Error starting interview:', error);
@@ -184,7 +159,6 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
     }
   };
 
-  // Helper functions for displaying data
   const getRoundScore = (round) => {
     if (!round.questions || round.questions.length === 0) return null;
     const avgScore = round.questions.reduce((sum, q) => sum + (q.score || 0), 0) / round.questions.length;
@@ -193,29 +167,28 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
 
   const getOverallScore = () => {
     if (!interview?.rounds) return null;
-    const completedRounds = interview.rounds.filter(round => round.status === 'completed');
+    const completedRounds = interview.rounds.filter((round) => round.status === 'completed');
     if (completedRounds.length === 0) return null;
-    
+
     const totalScore = completedRounds.reduce((sum, round) => {
       const roundScore = getRoundScore(round);
       return sum + (roundScore || 0);
     }, 0);
-    
+
     return Math.round((totalScore / completedRounds.length) * 10) / 10;
   };
 
-  // Media control handlers
   const handleMediaToggle = (type) => {
-    setLocalMediaSettings(prev => ({
+    setLocalMediaSettings((prev) => ({
       ...prev,
-      [type]: !prev[type]
+      [type]: !prev[type],
     }));
   };
 
   const handleDeviceChange = (type, deviceId) => {
-    setLocalMediaSettings(prev => ({
+    setLocalMediaSettings((prev) => ({
       ...prev,
-      [`${type}DeviceId`]: deviceId
+      [`${type}DeviceId`]: deviceId,
     }));
   };
 
@@ -225,8 +198,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-8 lg:p-12">
-      {/* Header */}
-      <motion.header 
+      <motion.header
         className="mb-8 md:mb-12"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -237,17 +209,15 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
             {isExistingInterview ? 'Continue Interview' : 'Start New Interview'}
           </h1>
           <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
-            {isExistingInterview 
-              ? 'Resume your technical interview session' 
-              : 'Get ready for your technical assessment'
-            }
+            {isExistingInterview
+              ? 'Resume your technical interview session'
+              : 'Get ready for your technical assessment'}
           </p>
         </div>
       </motion.header>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12">
-        {/* Left Panel - Camera & Controls */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-2xl shadow-md p-6 md:p-8"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -256,7 +226,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
           <div className="space-y-6 md:space-y-8">
             <div className="camera-container">
               <div className="bg-gray-900 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
-                {(localMediaSettings.video || localMediaSettings.audio) ? (
+                {localMediaSettings.video || localMediaSettings.audio ? (
                   <video
                     ref={videoRef}
                     autoPlay
@@ -277,21 +247,21 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={`py-3 px-4 rounded-lg font-medium text-sm md:text-base transition-colors ${
-                    localMediaSettings.video 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    localMediaSettings.video
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                   onClick={() => handleMediaToggle('video')}
                 >
                   {localMediaSettings.video ? 'Camera On' : 'Camera Off'}
                 </motion.button>
-                
+
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={`py-3 px-4 rounded-lg font-medium text-sm md:text-base transition-colors ${
-                    localMediaSettings.audio 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    localMediaSettings.audio
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                   onClick={() => handleMediaToggle('audio')}
@@ -300,10 +270,9 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                 </motion.button>
               </div>
 
-              {/* Device selectors */}
               <AnimatePresence>
                 {localMediaSettings.video && mediaDevices.video.length > 1 && (
-                  <motion.div 
+                  <motion.div
                     className="mt-4"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -316,7 +285,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                       onChange={(e) => handleDeviceChange('video', e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     >
-                      {mediaDevices.video.map(device => (
+                      {mediaDevices.video.map((device) => (
                         <option key={device.deviceId} value={device.deviceId}>
                           {device.label || `Camera ${mediaDevices.video.indexOf(device) + 1}`}
                         </option>
@@ -328,7 +297,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
 
               <AnimatePresence>
                 {localMediaSettings.audio && mediaDevices.audio.length > 1 && (
-                  <motion.div 
+                  <motion.div
                     className="mt-4"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -341,7 +310,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                       onChange={(e) => handleDeviceChange('audio', e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     >
-                      {mediaDevices.audio.map(device => (
+                      {mediaDevices.audio.map((device) => (
                         <option key={device.deviceId} value={device.deviceId}>
                           {device.label || `Mic ${mediaDevices.audio.indexOf(device) + 1}`}
                         </option>
@@ -354,25 +323,25 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
           </div>
         </motion.div>
 
-        {/* Right Panel - Uses data from backend APIs */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-2xl shadow-md p-6 md:p-8"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
         >
           <div className="space-y-6 md:space-y-8">
-            {/* Role Selection for New Interview */}
             <AnimatePresence>
               {!isExistingInterview && (
-                <motion.div 
+                <motion.div
                   className="role-selection"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 tracking-tight">Select Your Role</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 tracking-tight">
+                    Select Your Role
+                  </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {availableRoles.map((role, roleIdx) => (
                       <motion.div
@@ -380,8 +349,8 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                         whileHover={{ scale: 1.02, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                         whileTap={{ scale: 0.98 }}
                         className={`p-4 md:p-5 rounded-xl border cursor-pointer transition-all ${
-                          selectedRole === role.value 
-                            ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                          selectedRole === role.value
+                            ? 'border-blue-500 bg-blue-50 shadow-sm'
                             : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                         }`}
                         onClick={() => handleRoleSelect(role.value)}
@@ -400,18 +369,19 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
               )}
             </AnimatePresence>
 
-            {/* Interview Progress for Existing Interview - Data from backend */}
             <AnimatePresence>
               {isExistingInterview && interview && (
-                <motion.div 
+                <motion.div
                   className="interview-progress"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 tracking-tight">Interview Progress</h2>
-                  
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 tracking-tight">
+                    Interview Progress
+                  </h2>
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-gray-50 p-4 rounded-lg text-center">
                       <span className="block text-sm text-gray-600 mb-1">Current Round</span>
@@ -421,27 +391,28 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg text-center">
                       <span className="block text-sm text-gray-600 mb-1">Status</span>
-                      <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                        interview.status === 'active' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
+                      <span
+                        className={`text-sm font-medium px-3 py-1 rounded-full ${
+                          interview.status === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
                         {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                       </span>
                     </div>
                     {getOverallScore() && (
                       <div className="bg-gray-50 p-4 rounded-lg text-center">
                         <span className="block text-sm text-gray-600 mb-1">Overall Score</span>
-                        <span className="text-xl font-bold text-green-700">
-                          {getOverallScore()}/10
-                        </span>
+                        <span className="text-xl font-bold text-green-700">{getOverallScore()}/10</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Rounds Overview - Data from backend */}
                   <div className="rounds-overview">
-                    <h3 className="font-semibold text-gray-900 mb-3 text-base md:text-lg tracking-tight">Rounds Overview</h3>
+                    <h3 className="font-semibold text-gray-900 mb-3 text-base md:text-lg tracking-tight">
+                      Rounds Overview
+                    </h3>
                     <div className="space-y-3">
                       {interview.rounds?.map((round, index) => (
                         <motion.div
@@ -453,22 +424,20 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                             <span className="font-semibold text-gray-900 text-sm md:text-base">
                               Round {round.roundNumber}
                             </span>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                              round.status === 'completed' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}>
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                round.status === 'completed'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                            >
                               {round.status.charAt(0).toUpperCase() + round.status.slice(1)}
                             </span>
                           </div>
                           {round.status === 'completed' && (
-                            <div className="text-sm text-gray-700 mb-1">
-                              Score: {getRoundScore(round)}/10
-                            </div>
+                            <div className="text-sm text-gray-700 mb-1">Score: {getRoundScore(round)}/10</div>
                           )}
-                          <div className="text-sm text-gray-600">
-                            {round.questions?.length || 0} questions
-                          </div>
+                          <div className="text-sm text-gray-600">{round.questions?.length || 0} questions</div>
                         </motion.div>
                       ))}
                     </div>
@@ -477,7 +446,6 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
               )}
             </AnimatePresence>
 
-            {/* Start Button */}
             <motion.div className="action-section pt-4 md:pt-6 border-t border-gray-200">
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -495,16 +463,17 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                     <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Preparing...
                   </div>
+                ) : isExistingInterview ? (
+                  'Continue Interview'
                 ) : (
-                  isExistingInterview ? 'Continue Interview' : 'Start Interview'
+                  'Start Interview'
                 )}
               </motion.button>
-              
+
               <p className="text-center text-gray-600 mt-3 text-sm">
-                {isExistingInterview 
-                  ? 'Continue from where you left off' 
-                  : 'You will have 3 rounds of technical questions'
-                }
+                {isExistingInterview
+                  ? 'Continue from where you left off'
+                  : 'You will have 3 rounds of technical questions'}
               </p>
             </motion.div>
           </div>

@@ -1,3 +1,4 @@
+// Modified InterviewPage.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -6,9 +7,10 @@ import {
   Clock, Award, ChevronRight, ChevronDown, Video, 
   Settings, Brain, Target, BarChart3, User
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import LiveInterview from '../components/InterviewRoom/LiveInterview';
 import { useUserInterviewStore } from '../store/interviewStore';
-import { generateAnswerFeedback, completeRound, startInterview, generatePreparedQuestion } from '../services/interviewService';
+import { generateAnswerFeedback, completeRound, startInterview, generatePreparedQuestion,generateContextualFollowUp } from '../services/interviewService';
 
 export default function InterviewPage() {
   const [currentQuestion, setCurrentQuestion] = useState('');
@@ -20,6 +22,8 @@ export default function InterviewPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(false);
   const [roundQuestions, setRoundQuestions] = useState([]);
+  const [showRoundComplete, setShowRoundComplete] = useState(false);
+  const [currentQuestionType, setCurrentQuestionType] = useState('prepared');
   const [interviewData, setInterviewData] = useState({
     role: 'Frontend Developer',
     totalRounds: 3,
@@ -33,179 +37,200 @@ export default function InterviewPage() {
     setCurrentInterviewId 
   } = useUserInterviewStore();
 
-  useEffect(() => {
-    // Close sidebar when component mounts
-    window.dispatchEvent(new CustomEvent('closeSidebar'));
-    
-    // Initialize interview if not already set
-    if (!currentInterviewId) {
-      const newInterviewId = `interview_${Date.now()}`;
-      setCurrentInterviewId(newInterviewId);
-      setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
-    } else {
-      setInterviewData(prev => ({ ...prev, interviewId: currentInterviewId }));
-    }
-  }, [currentInterviewId, setCurrentInterviewId]);
+  const navigate = useNavigate();
 
-  const handleUserResponse = async (transcript) => {
-    if (!transcript || transcript.trim().length === 0) {
-      return;
-    }
+  useEffect(() => {
+  // Close sidebar when component mounts
+  window.dispatchEvent(new CustomEvent('closeSidebar'));
+  
+  // Initialize interview if not already set
+  if (!currentInterviewId) {
+    const newInterviewId = `interview_${Date.now()}`;
+    setCurrentInterviewId(newInterviewId);
+    setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
+  } else {
+    setInterviewData(prev => ({ ...prev, interviewId: currentInterviewId }));
+  }
+}, [currentInterviewId, setCurrentInterviewId]);
+
+const handleUserResponse = async (transcript) => {
+  if (!transcript || transcript.trim().length === 0) return;
+  
+  setLoading(true);
+  
+  try {
+    const newResponse = {
+      id: Date.now(),
+      question: currentQuestion,
+      answer: transcript,
+      timestamp: new Date().toISOString(),
+      score: 0,
+      feedback: '',
+      status: 'processing',
+      questionType: currentQuestionType
+    };
     
-    setLoading(true);
+    setResponses(prev => [...prev, newResponse]);
     
-    try {
-      // Create response object
-      const newResponse = {
-        id: Date.now(),
-        question: currentQuestion,
-        answer: transcript,
-        timestamp: new Date().toISOString(),
-        score: 0,
-        feedback: '',
-        status: 'processing'
-      };
-      
-      setResponses(prev => [...prev, newResponse]);
-      
-      // Call feedback API
-      const feedbackData = await generateAnswerFeedback(
+    const feedbackData = await generateAnswerFeedback(
+      currentQuestion,
+      transcript,
+      currentInterviewId,
+      currentRound
+    );
+    
+    setResponses(prev => 
+      prev.map(response => 
+        response.id === newResponse.id 
+          ? { 
+              ...response, 
+              score: feedbackData.score || 7,
+              feedback: feedbackData.feedback || 'Good response, could use more detail.',
+              summary: feedbackData.summary || transcript.substring(0, 100) + '...',
+              status: 'completed'
+            }
+          : response
+      )
+    );
+    
+    const questionData = {
+      question: currentQuestion,
+      answer: transcript,
+      score: feedbackData.score || 7,
+      feedback: feedbackData.feedback,
+      summary: feedbackData.summary,
+      timestamp: new Date().toISOString(),
+      questionType: currentQuestionType
+    };
+    
+    setRoundQuestions(prev => [...prev, questionData]);
+    
+    if (feedbackData.needsFollowUp) {
+      const previousQuestions = roundQuestions.map(q => ({
+        question: q.question,
+        answer: q.answer,
+        feedback: q.feedback
+      }));
+      const followUpResponse = await generateContextualFollowUp(
+        currentInterviewId,
+        currentRound,
         currentQuestion,
         transcript,
-        currentInterviewId,
-        currentRound
+        previousQuestions,
+        feedbackData,
+        feedbackData.followUpType
       );
-      
-      // Update response with feedback
-      setResponses(prev => 
-        prev.map(response => 
-          response.id === newResponse.id 
-            ? { 
-                ...response, 
-                score: feedbackData.score || 7,
-                feedback: feedbackData.feedback || 'Good response, could use more detail.',
-                summary: feedbackData.summary || transcript.substring(0, 100) + '...',
-                status: 'completed'
-              }
-            : response
-        )
-      );
-      
-      // Store question in round questions for completion
-      const questionData = {
-        question: currentQuestion,
-        answer: transcript,
-        score: feedbackData.score || 7,
-        feedback: feedbackData.feedback,
-        summary: feedbackData.summary,
-        timestamp: new Date().toISOString()
-      };
-      
-      setRoundQuestions(prev => [...prev, questionData]);
-      
-      // Generate follow-up question or move to next
-      if (roundQuestions.length < 2) { // 2 questions per round (can adjust)
-        await generateNextQuestion();
-      } else {
-        // Round complete
-        await completeCurrentRound();
-      }
-      
-    } catch (error) {
-      console.error('Error processing response:', error);
-      // Update response with error
-      setResponses(prev => 
-        prev.map(response => 
-          response.id === Date.now() 
-            ? { ...response, status: 'error', feedback: 'Failed to process response' }
-            : response
-        )
-      );
-    } finally {
-      setLoading(false);
+      setCurrentQuestion(followUpResponse.data.question);
+      setCurrentQuestionType('followup');
+    } else if (roundQuestions.length < 5) {
+      await generateNextQuestion();
+    } else {
+      await completeCurrentRound();
     }
-  };
+  } catch (error) {
+    console.error('Error processing response:', error);
+    // Basic error handling
+    setResponses(prev =>
+      prev.map(response =>
+        response.status === 'processing'
+          ? { ...response, status: 'error', feedback: 'Error processing response' }
+          : response
+      )
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const generateNextQuestion = async () => {
-    try {
-      // Use the actual API to generate prepared question
-      const response = await generatePreparedQuestion(currentInterviewId, currentRound);
-      
-      if (response.data && response.data.question) {
-        setCurrentQuestion(response.data.question);
-      } else {
-        // Fallback questions if API fails
-        const fallbackQuestions = [
-          "Can you explain the Virtual DOM in React and how it improves performance?",
-          "What are React hooks and when would you use useMemo vs useCallback?",
-          "How do you handle state management in large React applications?",
-          "What's the difference between controlled and uncontrolled components?",
-          "How would you optimize a React application for better performance?"
-        ];
-        const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
-        setCurrentQuestion(nextQuestion);
-      }
-      
-      // Simulate AI speaking
-      setIsPlaying(true);
-      setTimeout(() => setIsPlaying(false), 2000);
-      
-    } catch (error) {
-      console.error('Error generating next question:', error);
-      // Use fallback questions
+ const generateNextQuestion = async () => {
+  try {
+    const previousQuestions = roundQuestions.map(q => ({
+      question: q.question,
+      answer: q.answer,
+      feedback: q.feedback,
+      score: q.score
+    }));
+    const response = await generatePreparedQuestion(currentInterviewId, currentRound, previousQuestions);
+    
+    if (response.data && response.data.question) {
+      setCurrentQuestion(response.data.question);
+      setCurrentQuestionType('prepared');
+    } else {
+      // Fallback questions if API fails
       const fallbackQuestions = [
-        "Can you explain the Virtual DOM in React and how it improves performance?",
-        "What are React hooks and when would you use useMemo vs useCallback?",
-        "How do you handle state management in large React applications?"
+        "Can you explain how the Virtual DOM works in React and its performance benefits?",
+        "What are the key differences between useMemo and useCallback in React?",
+        "How do you manage state in a large-scale React application?",
+        "What is the difference between controlled and uncontrolled components in React?",
+        "How would you optimize a React application's rendering performance?"
       ];
       const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
       setCurrentQuestion(nextQuestion);
-      
-      setIsPlaying(true);
-      setTimeout(() => setIsPlaying(false), 2000);
+      setCurrentQuestionType('prepared');
     }
+    
+    setIsPlaying(true);
+    setTimeout(() => setIsPlaying(false), 2000);
+  } catch (error) {
+    console.error('Error generating next question:', error);
+    // Fallback questions
+    const fallbackQuestions = [
+      "Can you explain how the Virtual DOM works in React and its performance benefits?",
+      "What are the key differences between useMemo and useCallback in React?",
+      "How do you manage state in a large-scale React application?"
+    ];
+    const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
+    setCurrentQuestion(nextQuestion);
+    setCurrentQuestionType('prepared');
+    
+    setIsPlaying(true);
+    setTimeout(() => setIsPlaying(false), 2000);
+  }
+};
+
+const completeCurrentRound = async () => {
+  try {
+    setLoading(true);
+    
+    const roundScore = roundQuestions.reduce((sum, q) => sum + q.score, 0) / roundQuestions.length;
+    const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? 'Excellent performance!' : 'Good technical knowledge demonstrated.'}`;
+    
+    await completeRound(
+      currentInterviewId, 
+      currentRound, 
+      roundQuestions, 
+      roundFeedback
+    );
+    
+    if (currentRound < interviewData.totalRounds) {
+      setShowRoundComplete(true);
+    } else {
+      setInterviewStage('completed');
+    }
+    
+  } catch (error) {
+    console.error('Error completing round:', error);
+    if (currentRound < interviewData.totalRounds) {
+      setShowRoundComplete(true);
+    } else {
+      setInterviewStage('completed');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const handleContinueRound = () => {
+    setShowRoundComplete(false);
+    setCurrentRound(prev => prev + 1);
+    setRoundQuestions([]);
+    setCurrentQuestion('');
+    generateNextQuestion();
   };
 
-  const completeCurrentRound = async () => {
-    try {
-      setLoading(true);
-      
-      // Calculate round feedback
-      const roundScore = roundQuestions.reduce((sum, q) => sum + q.score, 0) / roundQuestions.length;
-      const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? 'Excellent performance!' : 'Good technical knowledge demonstrated.'}`;
-      
-      // Call backend to complete round
-      await completeRound(
-        currentInterviewId, 
-        currentRound, 
-        roundQuestions, 
-        roundFeedback
-      );
-      
-      // Move to next round or complete interview
-      if (currentRound < interviewData.totalRounds) {
-        setCurrentRound(prev => prev + 1);
-        setRoundQuestions([]);
-        setCurrentQuestion('');
-        await generateNextQuestion(); // Start next round with first question
-      } else {
-        setInterviewStage('completed');
-      }
-      
-    } catch (error) {
-      console.error('Error completing round:', error);
-      // Continue with UI even if API call fails
-      if (currentRound < interviewData.totalRounds) {
-        setCurrentRound(prev => prev + 1);
-        setRoundQuestions([]);
-        setCurrentQuestion('');
-        await generateNextQuestion();
-      } else {
-        setInterviewStage('completed');
-      }
-    } finally {
-      setLoading(false);
-    }
+  const handleEndInterview = () => {
+    setShowRoundComplete(false);
+    setInterviewStage('completed');
   };
 
   const startNewInterview = async () => {
@@ -247,11 +272,16 @@ export default function InterviewPage() {
     setRoundQuestions([]);
     setIsMuted(false);
     setShowHistory(false);
+    setShowRoundComplete(false);
     
     // Generate new interview ID
     const newInterviewId = `interview_${Date.now()}`;
     setCurrentInterviewId(newInterviewId);
     setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
+  };
+
+  const handleViewReport = () => {
+    navigate('/view-report', { state: { interviewId: currentInterviewId } });
   };
 
   const getRoundProgress = () => {
@@ -560,7 +590,7 @@ export default function InterviewPage() {
                   currentQuestion={currentQuestion}
                   onUserResponse={handleUserResponse}
                   onStatusUpdate={(status) => console.log('Interview status:', status)}
-                  disabled={interviewStage !== 'in-progress' || loading}
+                  disabled={interviewStage !== 'in-progress' || loading || showRoundComplete}
                 />
                 
                 {/* Loading State */}
@@ -602,41 +632,84 @@ export default function InterviewPage() {
                     </motion.button>
                   )}
 
-                  {interviewStage === 'completed' && (
+                  {showRoundComplete && (
+                    <motion.div
+                      key="round-complete"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="text-center space-y-6 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-inner"
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 10 }}
+                      >
+                        <div className="w-20 h-20 mx-auto bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-2xl shadow-green-300/50">
+                          <CheckCircle className="w-12 h-12 text-white" />
+                        </div>
+                      </motion.div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-green-800 tracking-tight">Yay! Round {currentRound} Completed</h3>
+                        <p className="text-sm text-green-600 mt-2 font-medium">Great job! You've finished this round.</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                        <motion.button
+                          onClick={handleContinueRound}
+                          whileHover={{ scale: 1.05, boxShadow: '0 8px 32px rgba(16, 185, 129, 0.2)' }}
+                          whileTap={{ scale: 0.98 }}
+                          className="px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all text-sm"
+                        >
+                          Continue to Round {currentRound + 1}
+                        </motion.button>
+                        <motion.button
+                          onClick={handleEndInterview}
+                          whileHover={{ scale: 1.05, boxShadow: '0 8px 32px rgba(107, 114, 128, 0.2)' }}
+                          whileTap={{ scale: 0.98 }}
+                          className="px-6 py-4 bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all text-sm"
+                        >
+                          End Interview
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {interviewStage === 'completed' && !showRoundComplete && (
                     <motion.div
                       key="complete"
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="text-center space-y-4"
+                      className="text-center space-y-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-inner"
                     >
                       <motion.div
-                        className="w-16 h-16 mx-auto bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-xl"
+                        className="w-20 h-20 mx-auto bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full flex items-center justify-center shadow-2xl shadow-blue-300/50"
                         whileHover={{ scale: 1.1, rotate: 360 }}
                         transition={{ duration: 0.6 }}
                       >
-                        <CheckCircle className="w-8 h-8 text-white" />
+                        <CheckCircle className="w-12 h-12 text-white" />
                       </motion.div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900">Interview Complete!</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          You've completed all {interviewData.totalRounds} rounds. Great work!
+                        <h3 className="text-2xl font-bold text-indigo-800 tracking-tight">Interview Complete!</h3>
+                        <p className="text-sm text-indigo-600 mt-2 font-medium">
+                          You've completed all {interviewData.totalRounds} rounds. Outstanding effort!
                         </p>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
                         <motion.button
                           onClick={resetInterview}
-                          whileHover={{ scale: 1.02 }}
+                          whileHover={{ scale: 1.05, boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)' }}
                           whileTap={{ scale: 0.98 }}
-                          className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                          className="px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all text-sm"
                         >
-                          New Session
+                          Start New Session
                         </motion.button>
                         <motion.button
-                          whileHover={{ scale: 1.02 }}
+                          onClick={handleViewReport}
+                          whileHover={{ scale: 1.05, boxShadow: '0 8px 32px rgba(107, 114, 128, 0.2)' }}
                           whileTap={{ scale: 0.98 }}
-                          className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+                          className="px-6 py-4 bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all text-sm"
                         >
-                          View Report
+                          View Detailed Report
                         </motion.button>
                       </div>
                     </motion.div>

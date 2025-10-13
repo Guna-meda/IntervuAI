@@ -7,15 +7,15 @@ const apiCall = async (endpoint, options = {}) => {
   let token;
   try {
     if (auth?.currentUser) {
-      token = await auth.currentUser.getIdToken(true); // Always get fresh token
+      token = await auth.currentUser.getIdToken(true);
       localStorage.setItem('token', token);
     } else {
       throw new Error('No authenticated user');
     }
   } catch (err) {
+    // Don't force a full-page redirect from a service helper.
+    // Let the caller decide how to handle authentication failures (show login, re-auth, etc.).
     console.warn('Could not retrieve token:', err.message);
-    // Redirect to login page
-    window.location.href = '/login';
     throw new Error('Authentication required');
   }
 
@@ -31,10 +31,8 @@ const apiCall = async (endpoint, options = {}) => {
   };
 
   try {
-   
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     const text = await response.text();
-    // Try parse json if possible for clearer logs
     let parsed = null;
     try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
 
@@ -48,7 +46,6 @@ const apiCall = async (endpoint, options = {}) => {
   }
 };
 
-// Get user's interviews with filtering and pagination
 export const getUserInterviews = async (params = {}) => {
   const queryParams = new URLSearchParams();
   
@@ -61,22 +58,18 @@ export const getUserInterviews = async (params = {}) => {
   return apiCall(endpoint);
 };
 
-// Get all user interviews
 export const getAllInterviews = async () => {
   return apiCall('/interviews');
 };
 
-// Get interview statistics
 export const getInterviewStats = async () => {
   return apiCall('/interviews/stats');
 };
 
-// Get specific interview details
 export const getInterviewDetails = async (interviewId) => {
   return apiCall(`/interviews/${interviewId}`);
 };
 
-// Start new interview
 export const startInterview = async (interviewData) => {
   return apiCall('/interviews/start', {
     method: 'POST',
@@ -84,7 +77,12 @@ export const startInterview = async (interviewData) => {
   });
 };
 
-// Generate prepared question
+export const startRound = async (interviewId, roundNumber) => {
+  return apiCall(`/interviews/${interviewId}/start-round/${roundNumber}`, {
+    method: 'POST',
+  });
+};
+
 export const generatePreparedQuestion = async (interviewId, roundNumber, previousQuestions = []) => {
   return apiCall('/llm/generate-prepared-question', {
     method: 'POST',
@@ -92,7 +90,6 @@ export const generatePreparedQuestion = async (interviewId, roundNumber, previou
   });
 };
 
-// Generate context-aware follow-up question
 export const generateContextualFollowUp = async (interviewId, roundNumber, currentQuestion, userResponse, previousQuestions, feedbackData, followUpType) => {
   return apiCall('/llm/generate-followup-question', {
     method: 'POST',
@@ -108,7 +105,6 @@ export const generateContextualFollowUp = async (interviewId, roundNumber, curre
   });
 };
 
-// Complete round
 export const completeRound = async (interviewId, roundNumber, questions, roundFeedback = '') => {
   return apiCall(`/interviews/${interviewId}/complete-round`, {
     method: 'POST',

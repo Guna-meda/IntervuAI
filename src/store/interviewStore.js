@@ -1,11 +1,11 @@
 // stores/userInterviewStore.js
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export const useUserInterviewStore = create(
   persist(
     (set) => ({
-      // UI state only
+      // UI state
       currentInterviewId: null,
       mediaSettings: {
         video: true,
@@ -22,6 +22,7 @@ export const useUserInterviewStore = create(
       ],
       // Actions
       setCurrentInterviewId: (id) => set({ currentInterviewId: id }),
+      resetInterview: () => set({ currentInterviewId: null }),
       setMediaSettings: (settings) =>
         set((state) => ({
           mediaSettings: { ...state.mediaSettings, ...settings },
@@ -29,6 +30,7 @@ export const useUserInterviewStore = create(
     }),
     {
       name: 'user-interview-store',
+      storage: createJSONStorage(() => localStorage), // Explicitly specify localStorage
     }
   )
 );

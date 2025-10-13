@@ -4,7 +4,8 @@ import LiveSpeechService from '../../services/LiveSpeechService'; // ✅ replace
 
 export default function LiveInterview({ 
   currentQuestion, 
-  onUserResponse,
+  onResponse, // preferred prop name used by pages
+  onUserResponse, // backward-compatible alias
   onStatusUpdate 
 }) {
   const [isListening, setIsListening] = useState(false);
@@ -69,7 +70,8 @@ const stopListening = async () => {
     // Handle different transcript scenarios
     if (transcript && transcript.trim().length > 0) {
       setUserTranscript(transcript);
-      if (onUserResponse) onUserResponse(transcript);
+      const responder = onResponse || onUserResponse;
+      if (responder) responder(transcript);
       if (onStatusUpdate) onStatusUpdate('processing');
     } else if (transcript === '') {
       // Empty but valid (no speech detected)

@@ -9,7 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import LiveInterview from '../components/InterviewRoom/LiveInterview';
 import { useUserInterviewStore } from '../store/interviewStore';
-import { generateAnswerFeedback, completeRound, startInterview, generatePreparedQuestion, generateContextualFollowUp } from '../services/interviewService';
+import { generateAnswerFeedback, completeRound, startInterview, startRound, generatePreparedQuestion, generateContextualFollowUp } from '../services/interviewService';
 
 export default function InterviewPage() {
   const [currentQuestion, setCurrentQuestion] = useState('');
@@ -233,36 +233,36 @@ export default function InterviewPage() {
     setInterviewStage('completed');
   };
 
-  const startNewInterview = async () => {
-    try {
-      setLoading(true);
-      
-      const interviewDataToSend = {
-        role: interviewData.role,
-        totalRounds: interviewData.totalRounds,
-        interviewId: currentInterviewId
-      };
-      
-      // Start the interview via API
-      const response = await startInterview(interviewDataToSend);
-      
-      if (response.interviewId) {
-        setCurrentInterviewId(response.interviewId);
-        setInterviewData(prev => ({ ...prev, interviewId: response.interviewId }));
-      }
-      
-      setInterviewStage('in-progress');
-      await generateNextQuestion(); // Generate first question
-      
-    } catch (error) {
-      console.error('Error starting interview:', error);
-      // Continue with UI even if API call fails
-      setInterviewStage('in-progress');
-      await generateNextQuestion();
-    } finally {
-      setLoading(false);
+const startNewInterview = async () => {
+  try {
+    setLoading(true);
+    const response = await startInterview({
+      role: interviewData.role,
+      totalRounds: interviewData.totalRounds
+    });
+    setCurrentInterviewId(response.interview.interviewId);
+    setInterviewData({
+      role: response.interview.role,
+      totalRounds: response.interview.totalRounds,
+      interviewId: response.interview.interviewId,
+      completedRounds: 0,
+      progress: 0
+    });
+    setCurrentRound(1);
+    await startRound(response.interview.interviewId, 1);
+    setInterviewStage('active');
+    await generateNextQuestion();
+  } catch (error) {
+    console.error('Error starting new interview:', error);
+    if (error.message.includes('Interview ID already exists')) {
+      alert('This interview ID is already in use. Starting a new interview.');
+      setCurrentInterviewId(null); // Reset to trigger a new interview
+      // Optionally retry by calling startNewInterview again
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   const resetInterview = () => {
     setInterviewStage('ready');

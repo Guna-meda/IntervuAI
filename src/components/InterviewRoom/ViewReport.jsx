@@ -1,3 +1,4 @@
+// ViewReport.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -57,7 +58,7 @@ export default function ViewReport() {
     if (completedRounds.length === 0) return 0;
     const total = completedRounds.reduce((sum, r) => {
       const roundScore =
-        r.questions.reduce((qSum, q) => qSum + (q.score || 0), 0) / r.questions.length;
+        r.questions.reduce((qSum, q) => qSum + (q.score || 0), 0) / (r.questions.length || 1);
       return sum + roundScore;
     }, 0);
     return (total / completedRounds.length).toFixed(1);
@@ -71,8 +72,6 @@ export default function ViewReport() {
   };
 
   const getProgressWidth = (score) => Math.min((score / 10) * 100, 100);
-
-  
 
   if (loading) {
     return (
@@ -97,7 +96,6 @@ export default function ViewReport() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
       <div ref={reportRef} className="max-w-6xl mx-auto">
-        {/* Header */}
         <motion.header
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -139,7 +137,6 @@ export default function ViewReport() {
           </div>
         </motion.header>
 
-        {/* Overall Summary */}
         {interview.overallSummary && (
           <motion.section
             initial={{ opacity: 0 }}
@@ -156,7 +153,6 @@ export default function ViewReport() {
           </motion.section>
         )}
 
-        {/* Round Breakdown */}
         <section className="space-y-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Target className="w-5 h-5 text-blue-600" /> Round Breakdown
@@ -181,7 +177,7 @@ export default function ViewReport() {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Round {round.roundNumber}</h3>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <p>{round.questions.length} questions</p>
+                      <p>{round.questions?.length || 0} questions</p>
                       <p>Score: {getRoundScore(round)}/10</p>
                     </div>
                   </div>
@@ -204,7 +200,6 @@ export default function ViewReport() {
                     className="border-t border-gray-200"
                   >
                     <div className="p-6 space-y-6">
-                      {/* Bar Chart */}
                       <div className="w-full h-56 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center">
                         <ResponsiveContainer width="95%" height="100%">
                           <BarChart data={round.questions.map((q, i) => ({ name: `Q${i + 1}`, score: q.score || 0 }))}>
@@ -217,7 +212,6 @@ export default function ViewReport() {
                         </ResponsiveContainer>
                       </div>
 
-                      {/* Questions */}
                       {round.questions.map((q, idx) => (
                         <div
                           key={idx}
@@ -229,7 +223,7 @@ export default function ViewReport() {
                               Question {idx + 1}
                             </h4>
                             <div className={`flex items-center gap-2 font-semibold ${getScoreColor(q.score).split(' ')[0]}`}>
-                              <Star className="w-5 h-5" /> {q.score}/10
+                              <Star className="w-5 h-5" /> {q.score || 0}/10
                             </div>
                           </div>
                           <p className="text-sm text-gray-700 mb-2"><strong>Question:</strong> {q.question}</p>
@@ -246,10 +240,7 @@ export default function ViewReport() {
           ))}
         </section>
 
-        {/* Buttons */}
         <div className="mt-10 text-center space-x-4">
-         
-
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}

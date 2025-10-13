@@ -1,4 +1,3 @@
-// PreInterviewPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -216,6 +215,10 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
     setCameraActive(!cameraActive);
   };
 
+  const handleViewReport = () => {
+    navigate('/view-report', { state: { interviewId: interview.interviewId } });
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -303,6 +306,44 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Completed Interview Section */}
+            {isExistingInterview && interview?.status === 'completed' && (
+              <motion.section
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-6 border border-emerald-200/60 shadow-xs text-center"
+              >
+                <motion.div
+                  variants={itemVariants}
+                  className="w-12 h-12 mx-auto bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center mb-4"
+                >
+                  <CheckCircle2 className="w-6 h-6 text-white" />
+                </motion.div>
+                <motion.h2
+                  variants={itemVariants}
+                  className="text-2xl font-bold text-emerald-800 mb-2"
+                >
+                  Yayy, Completed!
+                </motion.h2>
+                <motion.p
+                  variants={itemVariants}
+                  className="text-slate-600 text-sm mb-4"
+                >
+                  You've successfully completed your interview for {interview.role}.
+                </motion.p>
+                <motion.button
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleViewReport}
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
+                >
+                  View Report
+                </motion.button>
+              </motion.section>
+            )}
+
             {/* Role Selection */}
             {!isExistingInterview && (
               <motion.section
@@ -362,7 +403,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
             )}
 
             {/* Interview Progress */}
-            {isExistingInterview && interview && (
+            {isExistingInterview && interview?.status !== 'completed' && (
               <motion.section
                 variants={containerVariants}
                 initial="hidden"

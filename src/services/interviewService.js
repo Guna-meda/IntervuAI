@@ -132,3 +132,15 @@ export const generateAnswerFeedback = async (question, answer, interviewId, roun
     };
   }
 };
+
+export const getAnalytics = async () => {
+  return apiCall('/analytics');
+};
+
+export const getPerformanceTrends = async () => {
+  return apiCall('/analytics/trends');
+};
+
+export const getSkillAnalysis = async () => {
+  return apiCall('/analytics/skills');
+};

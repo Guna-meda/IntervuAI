@@ -7,7 +7,8 @@ import {
   Brain, ChevronLeft, BarChart3, Plus, ChevronDown,
   ArrowRight, CheckCircle2, Circle, Users,
   Target, MessageCircle, FileText, Rocket,
-  Cloud, Waves, Cpu, BrainCircuit
+  Cloud, Waves, Cpu, BrainCircuit,
+  RotateCcw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getUserInterviews, getInterviewDetails, getInterviewStats } from '../services/interviewService';
@@ -457,6 +458,121 @@ export default function IntervuAI() {
                 )}
               </div>
             </motion.section>
+
+
+{/* Completed Interviews Section */}
+<motion.section
+  variants={containerVariants}
+  initial="hidden"
+  animate="visible"
+  className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-cyan-200/40 shadow-xs relative overflow-hidden"
+>
+  {/* Section Background Pattern */}
+  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100/20 rounded-full -translate-y-16 translate-x-16" />
+  <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-100/20 rounded-full translate-y-12 -translate-x-12" />
+  
+  <div className="relative z-10">
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-emerald-100 rounded-xl">
+          <Award className="w-5 h-5 text-emerald-600" />
+        </div>
+        <h2 className="font-semibold text-slate-900 text-lg md:text-xl">
+          Completed Interviews
+        </h2>
+      </div>
+    </div>
+
+    {allInterviews.filter(interview => interview.status === 'completed').length === 0 ? (
+      <motion.div
+        variants={itemVariants}
+        className="text-center py-12 relative"
+      >
+        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Award className="w-8 h-8 text-emerald-600" />
+        </div>
+        <p className="text-slate-600 font-medium mb-2">No completed interviews yet.</p>
+        <p className="text-slate-500 text-sm mb-4">Complete an interview to see your results here</p>
+      </motion.div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {allInterviews
+          .filter(interview => interview.status === 'completed')
+          .slice(0, 4)
+          .map((interview, index) => (
+            <motion.div
+              key={interview.interviewId}
+              custom={index}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              whileHover={{ y: -4 }}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-emerald-200/40 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
+            >
+              {/* Card accent */}
+              <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-emerald-400 to-teal-400" />
+              
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-slate-900 text-base md:text-lg">{interview.role}</h3>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                  Completed
+                </span>
+              </div>
+              
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Rounds Completed</span>
+                  <span className="font-medium text-slate-900">
+                    {interview.rounds.filter(r => r.status === 'completed').length}/{interview.totalRounds}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Final Score</span>
+                  <span className="font-medium text-slate-900">{getOverallScore(interview)}/10</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Completed On</span>
+                  <span className="font-medium text-slate-900">
+                    {new Date(interview.completedAt || interview.lastActiveAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-4 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${getProgressPercentage(interview)}%` }}
+                  transition={{ duration: 0.8, delay: index * 0.1 }}
+                />
+              </div>
+              
+              <div className="mt-4 flex items-center justify-between">
+                <motion.button
+                  whileHover={{ scale: 1.05, x: 2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleViewReport(interview.interviewId)}
+                  className="text-emerald-600 font-medium text-sm flex items-center gap-1 hover:underline group/btn"
+                >
+                  View Report
+                  <FileText className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5" />
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleContinueInterview(interview)}
+                  className="text-slate-600 font-medium text-sm flex items-center gap-1 hover:underline"
+                >
+                  Retake
+                  <RotateCcw className="w-4 h-4" />
+                </motion.button>
+              </div>
+            </motion.div>
+          ))}
+      </div>
+    )}
+  </div>
+</motion.section>
 
             {/* Performance Analytics Section */}
             <motion.section

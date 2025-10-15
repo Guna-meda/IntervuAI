@@ -16,9 +16,11 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
     useUserInterviewStore();
 
   const [selectedRole, setSelectedRole] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('Intermediate'); // New state for difficulty
   const [localMediaSettings, setLocalMediaSettings] = useState(mediaSettings);
   const [mediaDevices, setMediaDevices] = useState({ video: [], audio: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [interview, setInterview] = useState(null);
   const [userInterviews, setUserInterviews] = useState([]);
   const [activeTab, setActiveTab] = useState('setup');
@@ -35,12 +37,17 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
     const loadInterviewData = async () => {
       if (isExistingInterview) {
         try {
+          setIsLoading(true);
+          setError(null);
           const response = await getInterviewDetails(interviewIdFromState);
           setInterview(response.interview);
           setSelectedRole(response.interview.role.toLowerCase().replace(' ', ''));
           setCurrentInterviewId(interviewIdFromState);
         } catch (error) {
           console.error('Error loading interview:', error);
+          setError('Failed to load interview details. Please try again.');
+        } finally {
+          setIsLoading(false);
         }
       }
 
@@ -126,28 +133,31 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
     };
   }, [localMediaSettings, cameraActive]);
 
-  const handleStartInterview = async () => {
+  const handleStartInterview = async (isRetake = false, difficulty = selectedDifficulty) => {
     if (!auth.currentUser) {
       alert('Please log in to start an interview');
       return;
     }
 
-    if (!isExistingInterview && !selectedRole) {
+    if (!isExistingInterview && !isRetake && !selectedRole) {
       alert('Please select a role to continue');
       return;
     }
 
     setIsLoading(true);
+    setError(null);
 
     try {
       setMediaSettings(localMediaSettings);
       let interviewData;
 
-      if (isExistingInterview) {
+      if (isExistingInterview && !isRetake) {
         interviewData = interview;
         setCurrentInterviewId(interview.interviewId);
       } else {
-        const roleData = availableRoles.find((r) => r.value === selectedRole);
+        const roleData = isRetake 
+          ? { label: interview.role } 
+          : availableRoles.find((r) => r.value === selectedRole);
         if (!roleData) {
           throw new Error('Selected role not found');
         }
@@ -155,6 +165,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
         const response = await startInterview({
           role: roleData.label,
           totalRounds: 3,
+          difficulty: isRetake ? difficulty : 'Intermediate', // Pass difficulty for new or retake
         });
 
         interviewData = response.interview;
@@ -168,7 +179,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
       navigate('/interviewPage', { state: { interviewId: interviewData.interviewId } });
     } catch (error) {
       console.error('Error starting interview:', error);
-      alert(`Failed to start interview: ${error.message || 'Please try again.'}`);
+      setError(`Failed to start interview: ${error.message || 'Please try again.'}`);
     } finally {
       setIsLoading(false);
     }
@@ -217,6 +228,11 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
 
   const handleViewReport = () => {
     navigate('/view-report', { state: { interviewId: interview.interviewId } });
+  };
+
+  const handleRetakeInterview = (difficulty) => {
+    setSelectedDifficulty(difficulty);
+    handleStartInterview(true, difficulty);
   };
 
   const containerVariants = {
@@ -303,6 +319,21 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
           </motion.p>
         </motion.header>
 
+        {error && (
+          <motion.div
+            variants={itemVariants}
+            className="bg-rose-100 text-rose-700 p-4 rounded-xl mb-6 text-center"
+          >
+            {error}
+            <button
+              onClick={() => loadInterviewData()}
+              className="ml-2 px-3 py-1 bg-rose-500 text-white rounded-lg"
+            >
+              Retry
+            </button>
+          </motion.div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -332,15 +363,187 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                 >
                   You've successfully completed your interview for {interview.role}.
                 </motion.p>
-                <motion.button
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleViewReport}
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
-                >
-                  View Report
-                </motion.button>
+                <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  {/* Main Container */}
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6, ease: "easeOut" }}
+    className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl shadow-blue-500/5 p-8 mb-8"
+  >
+    {/* Header Section */}
+    <div className="text-center mb-12">
+      <motion.h3 
+        className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        Your Journey Continues
+      </motion.h3>
+      <motion.p 
+        className="text-gray-600 text-lg font-medium max-w-2xl mx-auto leading-relaxed"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        Analyze your performance or level up with another challenge
+      </motion.p>
+    </div>
+
+    {/* Action Cards Grid */}
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-5xl mx-auto">
+      
+      {/* View Report Card */}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.4 }}
+        whileHover={{ 
+          scale: 1.02,
+          y: -4,
+          transition: { duration: 0.2 }
+        }}
+        className="group relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-2xl blur-sm group-hover:blur-md transition-all duration-300" />
+        <div className="relative bg-gradient-to-br from-white to-blue-50/50 rounded-2xl border border-blue-100/80 p-8 h-full transition-all duration-300 group-hover:border-blue-200 group-hover:shadow-xl">
+          {/* Card Header */}
+          <div className="flex items-start justify-between mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <motion.span 
+              className="px-4 py-2 bg-blue-100/80 text-blue-600 rounded-full text-sm font-semibold backdrop-blur-sm"
+              whileHover={{ scale: 1.05 }}
+            >
+              📊 Detailed Insights
+            </motion.span>
+          </div>
+          
+          {/* Card Content */}
+          <h4 className="text-xl font-bold text-gray-900 mb-3">Performance Report</h4>
+          <p className="text-gray-600 text-base mb-8 leading-relaxed">
+            Dive deep into your interview analytics with comprehensive feedback, skill assessments, and personalized improvement recommendations.
+          </p>
+          
+          {/* Action Button */}
+          <motion.button
+            whileHover={{ 
+              scale: 1.05,
+              shadow: "0 20px 40px -10px rgba(59, 130, 246, 0.5)"
+            }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleViewReport}
+            className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white py-4 rounded-2xl font-semibold text-base shadow-lg shadow-blue-500/25 transition-all duration-200 flex items-center justify-center gap-3 group/btn"
+          >
+            <span>View Comprehensive Report</span>
+            <motion.svg 
+              className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </motion.svg>
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* Retake Interview Card */}
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.5 }}
+        whileHover={{ 
+          scale: 1.02,
+          y: -4,
+          transition: { duration: 0.2 }
+        }}
+        className="group relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl blur-sm group-hover:blur-md transition-all duration-300" />
+        <div className="relative bg-gradient-to-br from-white to-amber-50/50 rounded-2xl border border-amber-100/80 p-8 h-full transition-all duration-300 group-hover:border-amber-200 group-hover:shadow-xl">
+          {/* Card Header */}
+          <div className="flex items-start justify-between mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/25">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <motion.span 
+              className="px-4 py-2 bg-amber-100/80 text-amber-600 rounded-full text-sm font-semibold backdrop-blur-sm"
+              whileHover={{ scale: 1.05 }}
+            >
+              🚀 Practice Mode
+            </motion.span>
+          </div>
+
+          {/* Card Content */}
+          <h4 className="text-xl font-bold text-gray-900 mb-3">Retake Interview</h4>
+          <p className="text-gray-600 text-base mb-6 leading-relaxed">
+            Enhance your skills by practicing with different difficulty levels and question sets.
+          </p>
+
+          {/* Difficulty Selector & Button */}
+          <div className="space-y-6">
+            <div className="relative">
+              <select
+                value={selectedDifficulty}
+                onChange={(e) => setSelectedDifficulty(e.target.value)}
+                className="w-full px-4 py-4 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl text-gray-700 font-semibold text-base focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-400 transition-all appearance-none cursor-pointer hover:border-amber-200"
+              >
+                <option value="Beginner" className="py-3 text-base">🎯 Beginner - Learn Fundamentals</option>
+                <option value="Intermediate" className="py-3 text-base">⚡ Intermediate - Build Confidence</option>
+                <option value="Advanced" className="py-3 text-base">🔥 Advanced - Master Skills</option>
+              </select>
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ 
+                scale: 1.05,
+                shadow: "0 20px 40px -10px rgba(245, 158, 11, 0.5)"
+              }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleRetakeInterview(selectedDifficulty)}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-4 rounded-2xl font-semibold text-base shadow-lg shadow-amber-500/25 transition-all duration-200 flex items-center justify-center gap-3 group/btn"
+            >
+              <span>Start New Session</span>
+              <motion.svg 
+                className="w-5 h-5 group-hover/btn:rotate-90 transition-transform"
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </motion.svg>
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+
+    {/* Footer Status */}
+    <motion.div 
+      className="flex justify-center mt-12 pt-8 border-t border-gray-100/80"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.8 }}
+    >
+      <div className="flex items-center gap-3 text-gray-500 text-sm font-medium bg-gray-50/80 backdrop-blur-sm px-6 py-3 rounded-2xl border border-gray-100">
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span>Interview completed • Ready for your next step</span>
+      </div>
+    </motion.div>
+  </motion.div>
+</div>
               </motion.section>
             )}
 
@@ -358,7 +561,18 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                   </div>
                   <h2 className="font-semibold text-slate-900 text-xl">Choose Your Role</h2>
                 </div>
-
+                <div className="mb-4">
+                  <label className="block text-sm text-slate-600 mb-2">Difficulty Level</label>
+                  <select
+                    value={selectedDifficulty}
+                    onChange={(e) => setSelectedDifficulty(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-slate-200/40 bg-white/50 backdrop-blur-sm text-slate-900 text-sm"
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {availableRoles.map((role, roleIdx) => (
                     <motion.div
@@ -403,7 +617,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
             )}
 
             {/* Interview Progress */}
-            {isExistingInterview && interview && interview.status !== 'completed' && (
+            {isExistingInterview && interview?.status !== 'completed' && (
               <motion.section
                 variants={containerVariants}
                 initial="hidden"
@@ -417,76 +631,95 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                   <h2 className="font-semibold text-slate-900 text-xl">Interview Progress</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-4 rounded-xl text-center">
-                    <span className="block text-sm text-slate-600 mb-1">Current Round</span>
-                    <span className="text-2xl font-bold text-slate-900">
-                      {interview?.currentRound ?? '—'} of {interview?.totalRounds || 3}
-                    </span>
+                {isLoading ? (
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-slate-600">Loading interview details...</p>
                   </div>
-                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-4 rounded-xl text-center">
-                    <span className="block text-sm text-slate-600 mb-1">Status</span>
-                    <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                      interview.status === 'active'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-cyan-100 text-cyan-700'
-                    }`}>
-                      {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
-                    </span>
+                ) : !interview ? (
+                  <div className="text-center">
+                    <p className="text-slate-600">Unable to load interview details.</p>
                   </div>
-                  {getOverallScore() && (
-                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl text-center">
-                      <span className="block text-sm text-slate-600 mb-1">Overall Score</span>
-                      <span className="text-2xl font-bold text-emerald-700">{getOverallScore()}/10</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-900 text-lg">Rounds Overview</h3>
-                  {interview.rounds?.map((round, index) => (
-                    <motion.div
-                      key={index}
-                      variants={itemVariants}
-                      whileHover={{ scale: 1.01 }}
-                      className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-4 rounded-xl border border-slate-200/40"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            round.status === 'completed'
-                              ? 'bg-emerald-100 text-emerald-600'
-                              : 'bg-cyan-100 text-cyan-600'
-                          }`}>
-                            {round.status === 'completed' ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                              <Circle className="w-4 h-4" />
-                            )}
-                          </div>
-                          <span className="font-semibold text-slate-900">
-                            Round {round.roundNumber}
-                          </span>
-                        </div>
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          round.status === 'completed'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {round.status.charAt(0).toUpperCase() + round.status.slice(1)}
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-4 rounded-xl text-center">
+                        <span className="block text-sm text-slate-600 mb-1">Current Round</span>
+                        <span className="text-2xl font-bold text-slate-900">
+                          {interview.currentRound || 1} of {interview.totalRounds || 3}
                         </span>
                       </div>
-                      {round.status === 'completed' && (
-                        <div className="text-sm text-slate-700 mb-2">
-                          Score: <span className="font-semibold text-emerald-600">{getRoundScore(round)}/10</span>
+                      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-4 rounded-xl text-center">
+                        <span className="block text-sm text-slate-600 mb-1">Status</span>
+                        <span
+                          className={`text-sm font-medium px-3 py-1 rounded-full ${
+                            interview.status === 'active'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-cyan-100 text-cyan-700'
+                          }`}
+                        >
+                          {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
+                        </span>
+                      </div>
+                      {getOverallScore() && (
+                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl text-center">
+                          <span className="block text-sm text-slate-600 mb-1">Overall Score</span>
+                          <span className="text-2xl font-bold text-emerald-700">{getOverallScore()}/10</span>
                         </div>
                       )}
-                      <div className="text-sm text-slate-600">
-                        {round.questions?.length || 0} questions completed
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-slate-900 text-lg">Rounds Overview</h3>
+                      {interview.rounds?.map((round, index) => (
+                        <motion.div
+                          key={index}
+                          variants={itemVariants}
+                          whileHover={{ scale: 1.01 }}
+                          className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-4 rounded-xl border border-slate-200/40"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                  round.status === 'completed'
+                                    ? 'bg-emerald-100 text-emerald-600'
+                                    : 'bg-cyan-100 text-cyan-600'
+                                }`}
+                              >
+                                {round.status === 'completed' ? (
+                                  <CheckCircle2 className="w-4 h-4" />
+                                ) : (
+                                  <Circle className="w-4 h-4" />
+                                )}
+                              </div>
+                              <span className="font-semibold text-slate-900">
+                                Round {round.roundNumber}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                round.status === 'completed'
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}
+                            >
+                              {round.status.charAt(0).toUpperCase() + round.status.slice(1)}
+                            </span>
+                          </div>
+                          {round.status === 'completed' && (
+                            <div className="text-sm text-slate-700 mb-2">
+                              Score: <span className="font-semibold text-emerald-600">{getRoundScore(round)}/10</span>
+                            </div>
+                          )}
+                          <div className="text-sm text-slate-600">
+                            {round.questions?.length || 0} questions completed
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </motion.section>
             )}
 
@@ -645,7 +878,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={handleStartInterview}
+                  onClick={() => handleStartInterview()}
                   disabled={isLoading || (!isExistingInterview && !selectedRole)}
                   className={`w-full py-4 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                     isLoading || (!isExistingInterview && !selectedRole)

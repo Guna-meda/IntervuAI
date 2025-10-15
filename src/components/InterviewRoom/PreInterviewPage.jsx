@@ -403,7 +403,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
             )}
 
             {/* Interview Progress */}
-            {isExistingInterview && interview?.status !== 'completed' && (
+            {isExistingInterview && interview && interview.status !== 'completed' && (
               <motion.section
                 variants={containerVariants}
                 initial="hidden"
@@ -421,7 +421,7 @@ const PreInterviewPage = ({ interviewId, onStartInterview }) => {
                   <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-4 rounded-xl text-center">
                     <span className="block text-sm text-slate-600 mb-1">Current Round</span>
                     <span className="text-2xl font-bold text-slate-900">
-                      {interview.currentRound} of {interview.totalRounds || 3}
+                      {interview?.currentRound ?? '—'} of {interview?.totalRounds || 3}
                     </span>
                   </div>
                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-4 rounded-xl text-center">

@@ -5,12 +5,12 @@ import {
   Volume2, VolumeX, CheckCircle, MessageSquare,
   Clock, Award, ChevronRight, ChevronDown, Video, 
   Settings, Brain, Target, BarChart3, User,
-  Mic, MicOff, Star, Zap, Crown
+  Mic, MicOff, Star, Zap, Crown, Trash2
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LiveInterview from '../components/InterviewRoom/LiveInterview';
 import { useUserInterviewStore } from '../store/interviewStore';
-import { generateAnswerFeedback, completeRound, startInterview, startRound, generatePreparedQuestion, generateContextualFollowUp, getInterviewDetails } from '../services/interviewService';
+import { generateAnswerFeedback, completeRound, startRound, generatePreparedQuestion, generateContextualFollowUp, getInterviewDetails, cancelInterview, deleteInterview } from '../services/interviewService';
 
 export default function InterviewPage() {
   const [currentQuestion, setCurrentQuestion] = useState('');
@@ -38,6 +38,8 @@ export default function InterviewPage() {
   } = useUserInterviewStore();
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isNew = location.state?.isNew || false;
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('closeSidebar'));
@@ -75,14 +77,20 @@ export default function InterviewPage() {
               status: 'completed',
               questionType: q.questionType || 'prepared'
             })));
-            setInterviewStage(data.status === 'active' ? 'ready' : data.status);
-            if (currentRoundData.status === 'in_progress') {
+            setInterviewStage(data.status === 'active' || isNew ? 'ready' : data.status);
+            if (currentRoundData.status === 'in_progress' && !isNew) {
               setInterviewStage('active');
               if ((currentRoundData.questions || []).length < 6) {
                 await generateNextQuestion();
               } else {
                 setShowRoundComplete(true);
               }
+            } else if (isNew) {
+              setInterviewStage('ready');
+              setResponses([]);
+              setRoundQuestions([]);
+              setCurrentQuestion('');
+              setShowRoundComplete(false);
             }
           }
         } catch (error) {
@@ -91,7 +99,7 @@ export default function InterviewPage() {
       };
       loadInterview();
     }
-  }, [interviewData.interviewId]);
+  }, [interviewData.interviewId, isNew]);
 
   const generateNextQuestion = async () => {
     try {
@@ -150,7 +158,7 @@ export default function InterviewPage() {
     try {
       const isNonInformative = transcript.trim().toLowerCase() === "i don't know" || 
                              transcript.trim().toLowerCase() === "i dont know" ||
-                             transcript.trim().length < 10; // Short responses are likely non-informative
+                             transcript.trim().length < 10;
       
       const newResponse = {
         id: Date.now(),
@@ -327,15 +335,6 @@ export default function InterviewPage() {
           setShowRoundComplete(true);
         }
       } else {
-        const response = await startInterview({
-          role: interviewData.role,
-          totalRounds: interviewData.totalRounds
-        });
-        setCurrentInterviewId(response.interviewId);
-        setInterviewData({ ...interviewData, interviewId: response.interviewId });
-        setFullInterview(response.interview);
-        await startRound(response.interviewId, 1);
-        setCurrentRound(1);
         setInterviewStage('active');
         await generateNextQuestion();
       }
@@ -367,6 +366,18 @@ export default function InterviewPage() {
     setInterviewStage('completed');
   };
 
+  const handleDeleteInterview = async () => {
+    if (window.confirm('Are you sure you want to delete this interview? This action cannot be undone.')) {
+      try {
+        await deleteInterview(interviewData.interviewId);
+        navigate('/pre-interview');
+      } catch (error) {
+        console.error('Error deleting interview:', error);
+        alert('Failed to delete interview. Please try again.');
+      }
+    }
+  };
+
   const handleViewReport = () => {
     navigate('/view-report', { state: { interviewId: interviewData.interviewId } });
   };
@@ -379,184 +390,61 @@ export default function InterviewPage() {
       totalRounds: 3,
       interviewId: null
     });
-    setCurrentRound(1);
-    setRoundQuestions([]);
     setResponses([]);
-    setInterviewStage('ready');
+    setRoundQuestions([]);
     setCurrentQuestion('');
-    setCurrentQuestionType('prepared');
-  };
-
-  const getOverallProgress = () => {
-    if (!fullInterview) return 0;
-    const completedRounds = fullInterview.rounds.filter(r => r.status === 'completed').length;
-    return Math.round((completedRounds / interviewData.totalRounds) * 100);
-  };
-
-  const getRoundProgress = () => {
-    return Math.round((roundQuestions.length / 6) * 100);
+    setInterviewStage('ready');
+    setShowRoundComplete(false);
+    navigate('/pre-interview');
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-sky-50 via-cyan-50/30 to-blue-50/20">
-      {/* Fixed Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-10 w-72 h-72 bg-cyan-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-blue-200/15 rounded-full blur-3xl"></div>
-      </div>
-
-      {/* Compact Header */}
-      <motion.header 
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white/70 backdrop-blur-sm border-b border-cyan-200/40 sticky top-0 z-50"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <motion.div 
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                className="relative"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl blur opacity-50"></div>
-                <div className="relative w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-white" />
-                </div>
-              </motion.div>
-              <div>
-                <h1 className="text-base font-bold text-slate-900">AI Interview</h1>
-                <p className="text-xs text-slate-600">{interviewData.role} • Round {currentRound}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <span>Overall</span>
-                    <span className="font-semibold text-slate-900">{getOverallProgress()}%</span>
-                  </div>
-                  <div className="w-20 bg-slate-200 rounded-full h-1">
-                    <motion.div
-                      className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${getOverallProgress()}%` }}
-                    />
-                  </div>
-                </div>
-                
-                <div className="text-right">
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <span>Round {currentRound}</span>
-                    <span className="font-semibold text-slate-900">{roundQuestions.length}/6</span>
-                  </div>
-                  <div className="w-16 bg-slate-200 rounded-full h-1">
-                    <motion.div
-                      className="bg-gradient-to-r from-emerald-500 to-green-500 h-1 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${getRoundProgress()}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <motion.button
-                onClick={resetInterview}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </motion.button>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
-      {/* Main Content - No Scroll */}
-      <main className="h-[calc(100vh-80px)] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
-          {/* AI Interviewer Panel - Left */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/50">
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-12 gap-6">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-4 flex flex-col h-full space-y-4"
+            className="lg:col-span-4 space-y-6"
           >
-            {/* Enhanced AI Interviewer Card */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-gradient-to-br from-cyan-100/50 to-blue-100/50 backdrop-blur-sm rounded-2xl p-6 flex items-center gap-6 border border-cyan-200/40"
+              className="bg-white/80 backdrop-blur-sm rounded-2xl border border-cyan-200/40 shadow-xs p-4"
             >
-              <motion.div
-                className="relative w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-2xl shadow-cyan-500/25"
-                animate={{ 
-                  scale: isPlaying ? [1, 1.05, 1] : 1 
-                }}
-                transition={{ 
-                  duration: 1.5, 
-                  repeat: isPlaying ? Infinity : 0 
-                }}
-              >
-                <img 
-                  src="/AI-avatar.png" 
-                  alt="AI Interviewer"
-                  className="w-full h-full object-cover"
-                />
-                
-                <motion.div
-                  className="absolute inset-0 border-4 border-cyan-200/50 rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-                />
-                
-                {isPlaying && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-2 -right-2"
-                  >
-                    <div className="flex items-center gap-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-2 py-1 rounded-full shadow-lg text-xs">
-                      <motion.div
-                        className="w-1.5 h-1.5 bg-white rounded-full"
-                        animate={{ scale: [1, 1.5, 1] }}
-                        transition={{ duration: 0.8, repeat: Infinity }}
-                      />
-                      <span className="font-medium">Speaking</span>
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-slate-900">Veda AI</h3>
-                <p className="text-sm text-slate-600 mb-3">Your virtual technical interviewer</p>
-                
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
-                    <Target className="w-3 h-3" />
-                    <span>{interviewData.role}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
-                    <Award className="w-3 h-3" />
-                    <span>Lvl 5 Expert</span>
-                  </div>
-                </div>
-
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <motion.button
-                    onClick={() => setIsMuted(!isMuted)}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`p-2 rounded-full transition-colors ${
-                      isMuted ? 'bg-rose-100 text-rose-600' : 'bg-white/70 text-slate-600'
-                    }`}
-                  >
-                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                  </motion.button>
-                  <span className="text-sm text-slate-500">{isMuted ? 'Muted' : 'Sound On'}</span>
+                  <div className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
+                    <Target className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">Progress</span>
+                </div>
+                <div className="text-xs text-slate-500">
+                  Round {currentRound}/{interviewData.totalRounds}
                 </div>
               </div>
+
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-slate-600">Questions Answered</span>
+                  <span className="text-slate-900">{responses.length}/6</span>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(responses.length / 6) * 100}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+              </div>
+
+              {responses.length > 0 && (
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-slate-600">Average Score</span>
+                  <span className="text-emerald-600">
+                    {(responses.reduce((sum, r) => sum + r.score, 0) / responses.length).toFixed(1)}/10
+                  </span>
+                </div>
+              )}
             </motion.div>
 
             {currentQuestion && (
@@ -830,6 +718,15 @@ export default function InterviewPage() {
                           className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-300 transition-all"
                         >
                           View Report
+                        </motion.button>
+                        <motion.button
+                          onClick={handleDeleteInterview}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="px-4 py-2 bg-rose-500 text-white rounded-lg font-semibold text-sm shadow-lg hover:shadow-xl transition-all flex items-center gap-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
                         </motion.button>
                       </div>
                     </motion.div>

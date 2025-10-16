@@ -46,18 +46,6 @@ const apiCall = async (endpoint, options = {}) => {
   }
 };
 
-export const getUserInterviews = async (params = {}) => {
-  const queryParams = new URLSearchParams();
-  
-  if (params.status) queryParams.append('status', params.status);
-  if (params.limit) queryParams.append('limit', params.limit);
-  if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-  if (params.order) queryParams.append('order', params.order);
-  
-  const endpoint = `/interviews?${queryParams.toString()}`;
-  return apiCall(endpoint);
-};
-
 export const getAllInterviews = async () => {
   return apiCall('/interviews');
 };
@@ -131,6 +119,31 @@ export const generateAnswerFeedback = async (question, answer, interviewId, roun
       score: 5
     };
   }
+};
+
+export const cancelInterview = async (interviewId) => {
+  return apiCall(`/interviews/cancel/${interviewId}`, {
+    method: 'POST',
+  });
+};
+
+export const deleteInterview = async (interviewId) => {
+  return apiCall(`/interviews/${interviewId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const getUserInterviews = async (params = {}) => {
+  const queryParams = new URLSearchParams();
+  
+  if (params.status) queryParams.append('status', params.status);
+  if (params.limit) queryParams.append('limit', params.limit);
+  if (params.page) queryParams.append('page', params.page);
+  if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+  if (params.order) queryParams.append('order', params.order);
+  
+  const endpoint = `/interviews?${queryParams.toString()}`;
+  return apiCall(endpoint);
 };
 
 export const getAnalytics = async () => {

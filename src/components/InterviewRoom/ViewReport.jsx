@@ -1,27 +1,61 @@
 // ViewReport.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { getInterviewDetails } from '../../services/interviewService';
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getInterviewDetails } from "../../services/interviewService";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
-  LineChart, Line, AreaChart, Area, PieChart, Pie, Cell
-} from 'recharts';
-import { 
-  Award, Brain, Target, ChevronDown, MessageSquare, Star, 
-  Download, ArrowLeft, TrendingUp, Users, Clock, Zap,
-  BarChart3, PieChart as PieChartIcon, Activity, Crown,
-  CheckCircle, XCircle, AlertCircle, Sparkles, Rocket
-} from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  Award,
+  Brain,
+  Target,
+  ChevronDown,
+  MessageSquare,
+  Star,
+  Download,
+  ArrowLeft,
+  TrendingUp,
+  Users,
+  Clock,
+  Zap,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Activity,
+  Crown,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Sparkles,
+  Rocket,
+  BookOpen,Lightbulb
+} from "lucide-react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 export default function ViewReport() {
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedRounds, setExpandedRounds] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
   const location = useLocation();
   const navigate = useNavigate();
   const reportRef = useRef();
@@ -30,7 +64,7 @@ export default function ViewReport() {
 
   useEffect(() => {
     if (!interviewId) {
-      navigate('/');
+      navigate("/");
       return;
     }
     const fetchReport = async () => {
@@ -38,7 +72,7 @@ export default function ViewReport() {
         const response = await getInterviewDetails(interviewId);
         setInterview(response.interview);
       } catch (error) {
-        console.error('Error fetching report:', error);
+        console.error("Error fetching report:", error);
       } finally {
         setLoading(false);
       }
@@ -55,24 +89,27 @@ export default function ViewReport() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 8) return 'from-emerald-500 to-green-500';
-    if (score >= 6) return 'from-amber-500 to-orange-500';
-    return 'from-rose-500 to-pink-500';
+    if (score >= 8) return "from-emerald-500 to-green-500";
+    if (score >= 6) return "from-amber-500 to-orange-500";
+    return "from-rose-500 to-pink-500";
   };
 
   const getScoreBgColor = (score) => {
-    if (score >= 8) return 'bg-emerald-50 border-emerald-200';
-    if (score >= 6) return 'bg-amber-50 border-amber-200';
-    return 'bg-rose-50 border-rose-200';
+    if (score >= 8) return "bg-emerald-50 border-emerald-200";
+    if (score >= 6) return "bg-amber-50 border-amber-200";
+    return "bg-rose-50 border-rose-200";
   };
 
   const getOverallScore = () => {
     if (!interview?.rounds) return 0;
-    const completedRounds = interview.rounds.filter((r) => r.status === 'completed');
+    const completedRounds = interview.rounds.filter(
+      (r) => r.status === "completed"
+    );
     if (completedRounds.length === 0) return 0;
     const total = completedRounds.reduce((sum, r) => {
       const roundScore =
-        r.questions.reduce((qSum, q) => qSum + (q.score || 0), 0) / (r.questions.length || 1);
+        r.questions.reduce((qSum, q) => qSum + (q.score || 0), 0) /
+        (r.questions.length || 1);
       return sum + roundScore;
     }, 0);
     return (total / completedRounds.length).toFixed(1);
@@ -81,48 +118,65 @@ export default function ViewReport() {
   const getRoundScore = (round) => {
     if (!round.questions?.length) return 0;
     const avg =
-      round.questions.reduce((sum, q) => sum + (q.score || 0), 0) / round.questions.length;
+      round.questions.reduce((sum, q) => sum + (q.score || 0), 0) /
+      round.questions.length;
     return avg.toFixed(1);
   };
 
   // Enhanced analytics data
   const getAnalyticsData = () => {
     if (!interview?.rounds) return {};
-    
-    const completedRounds = interview.rounds.filter(r => r.status === 'completed');
-    const allQuestions = completedRounds.flatMap(r => r.questions || []);
-    
+
+    const completedRounds = interview.rounds.filter(
+      (r) => r.status === "completed"
+    );
+    const allQuestions = completedRounds.flatMap((r) => r.questions || []);
+
     // Skill distribution
     const skillData = [
-      { subject: 'Technical', score: allQuestions.reduce((sum, q) => sum + (q.score || 0), 0) / (allQuestions.length || 1) },
-      { subject: 'Problem Solving', score: Math.random() * 3 + 7 }, // Mock data
-      { subject: 'Communication', score: Math.random() * 3 + 6 }, // Mock data
-      { subject: 'Confidence', score: Math.random() * 3 + 7.5 }, // Mock data
-      { subject: 'Clarity', score: Math.random() * 3 + 6.8 }, // Mock data
+      {
+        subject: "Technical",
+        score:
+          allQuestions.reduce((sum, q) => sum + (q.score || 0), 0) /
+          (allQuestions.length || 1),
+      },
+      { subject: "Problem Solving", score: Math.random() * 3 + 7 }, // Mock data
+      { subject: "Communication", score: Math.random() * 3 + 6 }, // Mock data
+      { subject: "Confidence", score: Math.random() * 3 + 7.5 }, // Mock data
+      { subject: "Clarity", score: Math.random() * 3 + 6.8 }, // Mock data
     ];
 
     // Time progression
     const timeData = completedRounds.map((round, index) => ({
       name: `Round ${index + 1}`,
       score: getRoundScore(round),
-      questions: round.questions?.length || 0
+      questions: round.questions?.length || 0,
     }));
 
     // Question type distribution
     const questionTypes = [
-      { name: 'Technical', value: allQuestions.filter(q => !q.questionType || q.questionType === 'prepared').length },
-      { name: 'Follow-up', value: allQuestions.filter(q => q.questionType === 'followup').length },
-      { name: 'Behavioral', value: Math.floor(allQuestions.length * 0.2) } // Mock data
+      {
+        name: "Technical",
+        value: allQuestions.filter(
+          (q) => !q.questionType || q.questionType === "prepared"
+        ).length,
+      },
+      {
+        name: "Follow-up",
+        value: allQuestions.filter((q) => q.questionType === "followup").length,
+      },
+      { name: "Behavioral", value: Math.floor(allQuestions.length * 0.2) }, // Mock data
     ];
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
+    const COLORS = ["#0088FE", "#00C49F", "#FFBB28"];
 
     return { skillData, timeData, questionTypes, COLORS, allQuestions };
   };
 
-  const { skillData, timeData, questionTypes, COLORS, allQuestions } = getAnalyticsData();
+  const { skillData, timeData, questionTypes, COLORS, allQuestions } =
+    getAnalyticsData();
 
-  const isInterviewCompleted = interview?.status === 'completed';
+  const isInterviewCompleted = interview?.status === "completed";
 
   if (loading) {
     return (
@@ -137,7 +191,9 @@ export default function ViewReport() {
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
             className="w-16 h-16 border-3 border-cyan-200 border-t-cyan-500 rounded-full mx-auto mb-4"
           />
-          <p className="text-slate-600 font-medium">Generating your detailed report...</p>
+          <p className="text-slate-600 font-medium">
+            Generating your detailed report...
+          </p>
         </motion.div>
       </div>
     );
@@ -159,7 +215,10 @@ export default function ViewReport() {
         <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-blue-200/15 rounded-full blur-3xl"></div>
       </div>
 
-      <div ref={reportRef} className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10">
+      <div
+        ref={reportRef}
+        className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10"
+      >
         {/* Header */}
         <motion.header
           initial={{ opacity: 0, y: -50 }}
@@ -182,11 +241,14 @@ export default function ViewReport() {
                 </motion.div>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-slate-900 bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
                   Performance Report
                 </h1>
                 <p className="text-slate-600 mt-2">
-                  {interview.role} • {new Date(interview.completedAt || interview.lastActiveAt).toLocaleDateString()}
+                  {interview.role} •{" "}
+                  {new Date(
+                    interview.completedAt || interview.lastActiveAt
+                  ).toLocaleDateString()}
                 </p>
                 <div className="flex items-center gap-4 mt-3">
                   <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -195,12 +257,18 @@ export default function ViewReport() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <Clock className="w-4 h-4" />
-                    <span>{interview.rounds.filter(r => r.status === 'completed').length} Rounds</span>
+                    <span>
+                      {
+                        interview.rounds.filter((r) => r.status === "completed")
+                          .length
+                      }{" "}
+                      Rounds
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl p-6 text-white shadow-lg text-center min-w-[140px]">
                 <p className="text-sm font-medium mb-2">Overall Score</p>
@@ -214,18 +282,24 @@ export default function ViewReport() {
                   />
                 </div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl p-6 text-white shadow-lg text-center min-w-[140px]">
                 <p className="text-sm font-medium mb-2">Rounds Completed</p>
                 <p className="text-3xl font-bold">
-                  {interview.rounds.filter(r => r.status === 'completed').length}/{interview.totalRounds}
+                  {
+                    interview.rounds.filter((r) => r.status === "completed")
+                      .length
+                  }
+                  /{interview.totalRounds}
                 </p>
                 <div className="mt-2 flex items-center justify-center gap-1">
                   {interview.rounds.map((round, idx) => (
                     <div
                       key={idx}
                       className={`w-2 h-2 rounded-full ${
-                        round.status === 'completed' ? 'bg-white' : 'bg-white/30'
+                        round.status === "completed"
+                          ? "bg-white"
+                          : "bg-white/30"
                       }`}
                     />
                   ))}
@@ -243,17 +317,17 @@ export default function ViewReport() {
           className="flex gap-2 mb-8 bg-white/50 backdrop-blur-sm rounded-2xl p-2 border border-cyan-200/40 max-w-md"
         >
           {[
-            { id: 'overview', label: 'Overview', icon: BarChart3 },
-            { id: 'analytics', label: 'Analytics', icon: Activity },
-            { id: 'details', label: 'Round Details', icon: Target }
+            { id: "overview", label: "Overview", icon: BarChart3 },
+            { id: "analytics", label: "Analytics", icon: Activity },
+            { id: "details", label: "Round Details", icon: Target },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all flex-1 ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -263,7 +337,7 @@ export default function ViewReport() {
         </motion.div>
 
         <AnimatePresence mode="wait">
-          {activeTab === 'overview' && (
+          {activeTab === "overview" && (
             <motion.div
               key="overview"
               initial={{ opacity: 0, y: 20 }}
@@ -273,9 +347,7 @@ export default function ViewReport() {
             >
               {/* Performance Summary */}
               {interview.overallSummary && (
-                <motion.section
-                  className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-cyan-200/40 shadow-xs"
-                >
+                <motion.section className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-cyan-200/40 shadow-xs">
                   <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
                     <Brain className="w-6 h-6 text-cyan-600" />
                     AI Performance Summary
@@ -291,9 +363,24 @@ export default function ViewReport() {
               {/* Quick Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                  { label: 'Total Questions', value: allQuestions.length, icon: MessageSquare, color: 'from-blue-500 to-cyan-500' },
-                  { label: 'Average Response', value: `${getOverallScore()}/10`, icon: TrendingUp, color: 'from-emerald-500 to-green-500' },
-                  { label: 'Success Rate', value: `${Math.round((getOverallScore() / 10) * 100)}%`, icon: Zap, color: 'from-purple-500 to-pink-500' }
+                  {
+                    label: "Total Questions",
+                    value: allQuestions.length,
+                    icon: MessageSquare,
+                    color: "from-blue-500 to-cyan-500",
+                  },
+                  {
+                    label: "Average Response",
+                    value: `${getOverallScore()}/10`,
+                    icon: TrendingUp,
+                    color: "from-emerald-500 to-green-500",
+                  },
+                  {
+                    label: "Success Rate",
+                    value: `${Math.round((getOverallScore() / 10) * 100)}%`,
+                    icon: Zap,
+                    color: "from-purple-500 to-pink-500",
+                  },
                 ].map((stat, idx) => (
                   <motion.div
                     key={stat.label}
@@ -302,10 +389,14 @@ export default function ViewReport() {
                     transition={{ delay: idx * 0.1 }}
                     className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-cyan-200/40 shadow-xs text-center"
                   >
-                    <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+                    <div
+                      className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mx-auto mb-4`}
+                    >
                       <stat.icon className="w-6 h-6 text-white" />
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 mb-1">{stat.value}</p>
+                    <p className="text-2xl font-bold text-slate-900 mb-1">
+                      {stat.value}
+                    </p>
                     <p className="text-slate-600 text-sm">{stat.label}</p>
                   </motion.div>
                 ))}
@@ -313,7 +404,7 @@ export default function ViewReport() {
             </motion.div>
           )}
 
-          {activeTab === 'analytics' && (
+          {activeTab === "analytics" && (
             <motion.div
               key="analytics"
               initial={{ opacity: 0, y: 20 }}
@@ -324,9 +415,7 @@ export default function ViewReport() {
               {/* Analytics Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Skill Radar Chart */}
-                <motion.div
-                  className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs"
-                >
+                <motion.div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs">
                   <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-cyan-600" />
                     Skill Distribution
@@ -351,9 +440,7 @@ export default function ViewReport() {
                 </motion.div>
 
                 {/* Progress Over Time */}
-                <motion.div
-                  className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs"
-                >
+                <motion.div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs">
                   <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-emerald-600" />
                     Progress Over Rounds
@@ -378,9 +465,7 @@ export default function ViewReport() {
                 </motion.div>
 
                 {/* Question Type Distribution */}
-                <motion.div
-                  className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs"
-                >
+                <motion.div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs">
                   <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                     <PieChartIcon className="w-5 h-5 text-purple-600" />
                     Question Types
@@ -393,13 +478,18 @@ export default function ViewReport() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) =>
+                            `${name} ${(percent * 100).toFixed(0)}%`
+                          }
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
                         >
                           {questionTypes.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
                           ))}
                         </Pie>
                         <Tooltip />
@@ -409,32 +499,41 @@ export default function ViewReport() {
                 </motion.div>
 
                 {/* Performance Metrics */}
-                <motion.div
-                  className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs"
-                >
+                <motion.div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs">
                   <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                     <Zap className="w-5 h-5 text-amber-600" />
                     Performance Insights
                   </h3>
                   <div className="space-y-4">
                     {[
-                      { label: 'Technical Mastery', score: 8.2, trend: 'up' },
-                      { label: 'Communication', score: 7.5, trend: 'up' },
-                      { label: 'Problem Solving', score: 8.8, trend: 'up' },
-                      { label: 'Response Time', score: 6.9, trend: 'stable' }
+                      { label: "Technical Mastery", score: 8.2, trend: "up" },
+                      { label: "Communication", score: 7.5, trend: "up" },
+                      { label: "Problem Solving", score: 8.8, trend: "up" },
+                      { label: "Response Time", score: 6.9, trend: "stable" },
                     ].map((metric, idx) => (
-                      <div key={metric.label} className="flex items-center justify-between">
-                        <span className="text-slate-700 font-medium">{metric.label}</span>
+                      <div
+                        key={metric.label}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-slate-700 font-medium">
+                          {metric.label}
+                        </span>
                         <div className="flex items-center gap-2">
                           <div className="w-20 bg-slate-200 rounded-full h-2">
                             <motion.div
-                              className={`h-2 rounded-full bg-gradient-to-r ${getScoreColor(metric.score)}`}
+                              className={`h-2 rounded-full bg-gradient-to-r ${getScoreColor(
+                                metric.score
+                              )}`}
                               initial={{ width: 0 }}
-                              animate={{ width: `${(metric.score / 10) * 100}%` }}
+                              animate={{
+                                width: `${(metric.score / 10) * 100}%`,
+                              }}
                               transition={{ delay: idx * 0.1 }}
                             />
                           </div>
-                          <span className="text-sm font-bold text-slate-900 w-8">{metric.score}/10</span>
+                          <span className="text-sm font-bold text-slate-900 w-8">
+                            {metric.score}/10
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -444,7 +543,7 @@ export default function ViewReport() {
             </motion.div>
           )}
 
-          {activeTab === 'details' && (
+          {activeTab === "details" && (
             <motion.div
               key="details"
               initial={{ opacity: 0, y: 20 }}
@@ -469,7 +568,7 @@ export default function ViewReport() {
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
                           {round.roundNumber}
                         </div>
-                        {round.status === 'completed' && (
+                        {round.status === "completed" && (
                           <motion.div
                             className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center"
                             animate={{ scale: [1, 1.2, 1] }}
@@ -480,21 +579,31 @@ export default function ViewReport() {
                         )}
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-slate-900">Round {round.roundNumber}</h3>
+                        <h3 className="text-xl font-bold text-slate-900">
+                          Round {round.roundNumber}
+                        </h3>
                         <div className="flex items-center gap-6 text-slate-600 mt-2">
                           <div className="flex items-center gap-2">
                             <MessageSquare className="w-4 h-4" />
-                            <span>{round.questions?.length || 0} questions</span>
+                            <span>
+                              {round.questions?.length || 0} questions
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Star className="w-4 h-4" />
-                            <span className="font-semibold">{getRoundScore(round)}/10</span>
+                            <span className="font-semibold">
+                              {getRoundScore(round)}/10
+                            </span>
                           </div>
                         </div>
                       </div>
                     </div>
                     <motion.div
-                      animate={{ rotate: expandedRounds.includes(round.roundNumber) ? 180 : 0 }}
+                      animate={{
+                        rotate: expandedRounds.includes(round.roundNumber)
+                          ? 180
+                          : 0,
+                      }}
                       transition={{ duration: 0.3 }}
                       className="p-3 bg-slate-100 rounded-xl"
                     >
@@ -506,7 +615,7 @@ export default function ViewReport() {
                     {expandedRounds.includes(round.roundNumber) && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
+                        animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.4 }}
                         className="border-t border-cyan-200/40"
@@ -514,16 +623,26 @@ export default function ViewReport() {
                         <div className="p-8 space-y-6">
                           {/* Round Score Chart */}
                           <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-2xl p-6 border border-cyan-200/40">
-                            <h4 className="text-lg font-semibold text-slate-900 mb-4">Question Scores</h4>
+                            <h4 className="text-lg font-semibold text-slate-900 mb-4">
+                              Question Scores
+                            </h4>
                             <div className="h-64">
                               <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={round.questions.map((q, i) => ({ name: `Q${i + 1}`, score: q.score || 0 }))}>
-                                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <BarChart
+                                  data={round.questions.map((q, i) => ({
+                                    name: `Q${i + 1}`,
+                                    score: q.score || 0,
+                                  }))}
+                                >
+                                  <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke="#e2e8f0"
+                                  />
                                   <XAxis dataKey="name" />
                                   <YAxis domain={[0, 10]} />
                                   <Tooltip />
-                                  <Bar 
-                                    dataKey="score" 
+                                  <Bar
+                                    dataKey="score"
                                     radius={[6, 6, 0, 0]}
                                     className="fill-cyan-500"
                                   />
@@ -539,46 +658,94 @@ export default function ViewReport() {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: idx * 0.1 }}
-                              className={`p-6 rounded-2xl border-2 ${getScoreBgColor(q.score)}`}
+                              className={`p-6 rounded-2xl border-2 ${getScoreBgColor(
+                                q.score
+                              )}`}
                             >
                               <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-start gap-4">
-                                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getScoreColor(q.score)} flex items-center justify-center text-white font-bold text-sm`}>
+                                  <div
+                                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getScoreColor(
+                                      q.score
+                                    )} flex items-center justify-center text-white font-bold text-sm`}
+                                  >
                                     {q.score || 0}
                                   </div>
                                   <div>
-                                    <h4 className="text-lg font-semibold text-slate-900 mb-2">Question {idx + 1}</h4>
-                                    <p className="text-slate-700 font-medium">{q.question}</p>
+                                    <h4 className="text-lg font-semibold text-slate-900 mb-2">
+                                      Question {idx + 1}
+                                    </h4>
+                                    <p className="text-slate-700 font-medium">
+                                      {q.question}
+                                    </p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-slate-600">
                                   <Star className="w-4 h-4" />
-                                  <span className="font-bold">{q.score || 0}/10</span>
+                                  <span className="font-bold">
+                                    {q.score || 0}/10
+                                  </span>
                                 </div>
                               </div>
-                              
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="space-y-3">
+
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="space-y-4">
                                   <div>
-                                    <p className="text-sm font-semibold text-slate-900 mb-1">Your Answer</p>
-                                    <p className="text-slate-700 bg-white/50 rounded-lg p-3 border border-slate-200">
-                                      {q.answer || 'No answer provided'}
+                                    <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                                      <BookOpen className="w-4 h-4" />
+                                      Your Answer Summary
+                                    </p>
+                                    <p className="text-slate-700 bg-white/50 rounded-lg p-4 border border-slate-200 leading-relaxed">
+                                      {/* Now using the proper answerSummary from backend */}
+                                      {q.answerSummary ||
+                                        "No summary available"}
                                     </p>
                                   </div>
-                                  {q.expectedAnswer && (
+
+                                  {/* Keywords Section */}
+                                  {q.keywords && q.keywords.length > 0 && (
                                     <div>
-                                      <p className="text-sm font-semibold text-slate-900 mb-1">Expected Answer</p>
-                                      <p className="text-slate-700 bg-emerald-50/50 rounded-lg p-3 border border-emerald-200">
-                                        {q.expectedAnswer}
+                                      <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                                        <Key className="w-4 h-4" />
+                                        Quick Revision Keywords
                                       </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {q.keywords.map((keyword, keyIdx) => (
+                                          <span
+                                            key={keyIdx}
+                                            className="px-3 py-1 bg-cyan-100 text-cyan-800 rounded-full text-xs font-medium capitalize"
+                                          >
+                                            {keyword}
+                                          </span>
+                                        ))}
+                                      </div>
                                     </div>
                                   )}
                                 </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900 mb-1">AI Feedback</p>
-                                  <p className="text-slate-700 bg-cyan-50/50 rounded-lg p-3 border border-cyan-200">
-                                    {q.feedback || 'No feedback provided'}
-                                  </p>
+
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                                      <Lightbulb className="w-4 h-4" />
+                                      Expected Answer
+                                    </p>
+                                    <p className="text-slate-700 bg-emerald-50/50 rounded-lg p-4 border border-emerald-200 leading-relaxed">
+                                      {/* Now using the simplified expectedAnswer from backend */}
+                                      {q.expectedAnswer ||
+                                        "No expected answer provided."}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                                      <MessageSquare className="w-4 h-4" />
+                                      Detailed Feedback
+                                    </p>
+                                    <p className="text-slate-700 bg-cyan-50/50 rounded-lg p-4 border border-cyan-200 leading-relaxed">
+                                      {q.feedback ||
+                                        "No detailed feedback provided"}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
                             </motion.div>
@@ -603,14 +770,14 @@ export default function ViewReport() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(isInterviewCompleted ? '/intervuai' : '/interviewPage')}
+            onClick={() =>
+              navigate(isInterviewCompleted ? "/intervuai" : "/interviewPage")
+            }
             className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
           >
             <ArrowLeft className="w-5 h-5" />
-            {isInterviewCompleted ? 'Back to Interviews' : 'Back to Interview'}
+            {isInterviewCompleted ? "Back to Interviews" : "Back to Interview"}
           </motion.button>
-          
-          
         </motion.div>
       </div>
     </div>

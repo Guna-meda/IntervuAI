@@ -3,6 +3,8 @@ let audioChunks = [];
 let audioContext;
 let analyser;
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+
 const LiveSpeechService = {
   async startRecording() {
     try {
@@ -97,8 +99,8 @@ const LiveSpeechService = {
           formData.append('audio', audioBlob, 'audio.webm');
 
           console.log('LiveSpeechService: Sending audio to backend...');
-          
-          const res = await fetch('http://localhost:3001/api/v1/speech/transcribe', {
+
+          const res = await fetch(`${API_BASE_URL}/speech/transcribe`, {
             method: 'POST',
             body: formData,
           });

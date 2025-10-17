@@ -553,7 +553,7 @@ export default function IntervuAI() {
                       onClick={handleNewInterview}
                       className="inline-flex items-center gap-1.5 sm:gap-2 bg-cyan-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm shadow-lg hover:shadow-xl transition-all"
                     >
-                      <Rocket className="w-3 h-3 sm:w-4 h-4" />
+                      <Rocket className="w-3 h-3 sm:w-4 sm:h-4" />
                       Start First Interview
                     </motion.button>
                   </motion.div>
@@ -633,7 +633,7 @@ export default function IntervuAI() {
                             className="text-cyan-600 font-medium flex items-center gap-0.5 sm:gap-1 hover:underline group/btn"
                           >
                             Continue
-                            <ArrowRight className="w-2.5 h-2.5 sm:w-4 h-4 transition-transform group-hover/btn:translate-x-0.5" />
+                            <ArrowRight className="w-2.5 h-2.5 sm:w-4 sm:h-4 transition-transform group-hover/btn:translate-x-0.5" />
                           </motion.button>
                           <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -642,7 +642,7 @@ export default function IntervuAI() {
                             className="text-slate-600 font-medium flex items-center gap-0.5 sm:gap-1 hover:underline"
                           >
                             View Report
-                            <FileText className="w-2.5 h-2.5 sm:w-4 h-4" />
+                            <FileText className="w-2.5 h-2.5 sm:w-4 sm:h-4" />
                           </motion.button>
                         </div>
                       </motion.div>
@@ -799,7 +799,7 @@ export default function IntervuAI() {
                             className="text-emerald-600 font-medium flex items-center gap-0.5 sm:gap-1 hover:underline group/btn"
                           >
                             View Report
-                            <FileText className="w-2.5 h-2.5 sm:w-4 h-4 transition-transform group-hover/btn:translate-x-0.5" />
+                            <FileText className="w-2.5 h-2.5 sm:w-4 sm:h-4 transition-transform group-hover/btn:translate-x-0.5" />
                           </motion.button>
                           <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -808,7 +808,7 @@ export default function IntervuAI() {
                             className="text-slate-600 font-medium flex items-center gap-0.5 sm:gap-1 hover:underline"
                           >
                             Retake
-                            <RotateCcw className="w-2.5 h-2.5 sm:w-4 h-4" />
+                            <RotateCcw className="w-2.5 h-2.5 sm:w-4 sm:h-4" />
                           </motion.button>
                         </div>
                       </motion.div>
@@ -886,7 +886,7 @@ export default function IntervuAI() {
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-1 sm:mb-1.5">
                         <p className={`text-xs sm:text-sm font-medium ${stat.text}`}>{stat.label}</p>
-                        <stat.icon className={`w-3 h-3 sm:w-4 h-4 ${stat.text}`} />
+                        <stat.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${stat.text}`} />
                       </div>
                       <p className={`text-lg sm:text-2xl font-bold ${stat.text.replace('700', '900')}`}>
                         {stat.value}{stat.unit}
@@ -948,7 +948,7 @@ export default function IntervuAI() {
             >
               <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                 <h3 className="font-semibold text-slate-900 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base">
-                  <Calendar className="w-3 h-3 sm:w-4 h-4 text-cyan-500" />
+                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-500" />
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                 </h3>
                 <div className="flex gap-0.5 sm:gap-1">
@@ -1028,7 +1028,7 @@ export default function IntervuAI() {
                       <p className="text-cyan-100 text-xs sm:text-sm opacity-90">Keep up the great work!</p>
                     </div>
                     <div className="p-1 sm:p-1.5 bg-white/20 rounded-lg sm:rounded-xl backdrop-blur-sm">
-                      <TrendingUp className="w-3 h-3 sm:w-4 h-4" />
+                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
                     </div>
                   </div>
 
@@ -1049,7 +1049,7 @@ export default function IntervuAI() {
                     onClick={handleNewInterview}
                     className="w-full bg-white text-cyan-600 font-semibold py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg sm:rounded-xl hover:shadow-md transition-all flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm relative z-20"
                   >
-                    <Plus className="w-3 h-3 sm:w-4 h-4" />
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                     New Session
                   </motion.button>
                 </div>
@@ -1068,7 +1068,7 @@ export default function IntervuAI() {
               <div className="relative z-10">
                 <div className="flex items-start gap-1.5 sm:gap-2 flex-wrap">
                   <div className="flex-shrink-0 w-6 sm:w-8 h-6 sm:h-8 bg-gradient-to-br from-cyan-400 to-blue-400 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">
-                    <Sparkles className="w-3 h-3 sm:w-4 h-4 text-white" />
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-slate-900 mb-0.5 sm:mb-1 text-sm sm:text-base">Daily Insight</h4>

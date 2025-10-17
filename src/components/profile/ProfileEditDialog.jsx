@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, Briefcase, FileText, Plus, X, Save, Globe, Github, Linkedin } from 'lucide-react';
+import { User, Briefcase, FileText, Plus, X, Save, Globe, Github, Linkedin, Camera } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import ProfileService from '../../services/profileService';
 
 export default function ProfileEditDialog({ onClose, onSave }) {
-  const { user: firebaseUser, mongoUser } = useAuthStore();
+  const { user: firebaseUser, mongoUser, setUser } = useAuthStore();
   const profile = mongoUser?.profile || {};
 
   const [formData, setFormData] = useState({
@@ -18,7 +19,9 @@ export default function ProfileEditDialog({ onClose, onSave }) {
     website: profile.website || '',
     skills: profile.skills || [],
     experience: profile.experience || [],
-    resumeText: profile.resumeText || ''
+    resumeText: profile.resumeText || '',
+    avatar: profile.avatar || null,
+    coverImage: profile.coverImage || null
   });
 
   const [currentSkill, setCurrentSkill] = useState('');
@@ -31,6 +34,11 @@ export default function ProfileEditDialog({ onClose, onSave }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState({ type: null, loading: false });
+  
+  // FIX: Properly initialize refs
+  const avatarFileInputRef = useRef(null);
+  const coverFileInputRef = useRef(null);
 
   const addSkill = () => {
     if (currentSkill.trim() && !formData.skills.includes(currentSkill.trim())) {
@@ -41,43 +49,6 @@ export default function ProfileEditDialog({ onClose, onSave }) {
       setCurrentSkill('');
     }
   };
-
-  const handleImageChange = async (event, imageType) => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append(imageType, file);
-  
-  // Append all other form data
-  Object.keys(formData).forEach(key => {
-    if (key !== 'avatar' && key !== 'coverImage') {
-      formData.append(key, formData[key]);
-    }
-  });
-
-  setSaving(true);
-  try {
-    const idToken = await firebaseUser.getIdToken();
-    const response = await fetch('http://localhost:3001/api/v1/users/update-profile', {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error('Failed to update image');
-    
-    const updatedUser = await response.json();
-    useAuthStore.getState().setUser(firebaseUser, updatedUser.data);
-    setFormData(updatedUser.data.profile);
-  } catch (error) {
-    console.error('Error updating image:', error);
-  } finally {
-    setSaving(false);
-  }
-};
 
   const removeSkill = (skillToRemove) => {
     setFormData(prev => ({
@@ -109,6 +80,54 @@ export default function ProfileEditDialog({ onClose, onSave }) {
     }));
   };
 
+ 
+  const handleImageChange = async (event, imageType) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploading({ type: imageType, loading: true });
+    setError('');
+
+    try {
+      console.log('Starting image upload...', { imageType, file });
+      const result = await ProfileService.uploadImage(file, imageType);
+      console.log('Image upload successful:', result);
+      
+      setFormData(prev => ({
+        ...prev,
+        [imageType]: result.data
+      }));
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError(`Failed to upload image: ${error.message}`);
+    } finally {
+      setUploading({ type: null, loading: false });
+      // Clear the file input
+      event.target.value = '';
+    }
+  };
+
+  const handleImageClick = (imageType) => {
+    if (imageType === 'avatar' && avatarFileInputRef.current) {
+      avatarFileInputRef.current.click();
+    } else if (imageType === 'coverImage' && coverFileInputRef.current) {
+      coverFileInputRef.current.click();
+    }
+  };
+
   const handleSubmit = async () => {
     if (!isFormValid) return;
 
@@ -116,23 +135,11 @@ export default function ProfileEditDialog({ onClose, onSave }) {
     setError('');
 
     try {
-      const idToken = await firebaseUser.getIdToken();
-      const response = await fetch('http://localhost:3001/api/v1/users/update-profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => null);
-        throw new Error(err?.error || 'Failed to update profile');
-      }
-
-      const updatedUser = await response.json();
-      useAuthStore.getState().setUser(firebaseUser, updatedUser.data || updatedUser);
+      console.log('Submitting profile data:', formData);
+      const updatedUser = await ProfileService.updateProfile(formData);
+      console.log('Profile update successful:', updatedUser);
+      
+      setUser(firebaseUser, updatedUser.data || updatedUser);
 
       if (typeof onSave === 'function') {
         onSave(updatedUser.data || updatedUser);
@@ -253,69 +260,98 @@ export default function ProfileEditDialog({ onClose, onSave }) {
             />
           </div>
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-  {/* Avatar Upload */}
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-3">
-      Profile Picture
-    </label>
-    <div className="relative group">
-      <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-gray-300 overflow-hidden mx-auto">
-        {formData.avatar?.url ? (
-          <img
-            src={formData.avatar.url}
-            alt="Profile"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <User className="w-8 h-8 text-gray-400" />
-          </div>
-        )}
-      </div>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => handleImageChange(e, 'avatar')}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all rounded-2xl">
-        <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-    </div>
-  </div>
+           {/* Image Upload Section */}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Avatar Upload */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Profile Picture
+                {uploading.type === 'avatar' && uploading.loading && (
+                  <span className="text-blue-600 text-xs ml-2">Uploading...</span>
+                )}
+              </label>
+              <div className="relative group">
+                <div 
+                  className="w-32 h-32 rounded-2xl border-2 border-dashed border-gray-300 overflow-hidden mx-auto cursor-pointer"
+                  onClick={() => handleImageClick('avatar')}
+                >
+                  {formData.avatar?.url ? (
+                    <img
+                      src={formData.avatar.url}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <User className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={avatarFileInputRef}
+                  accept="image/*"
+                  onChange={(e) => handleImageChange(e, 'avatar')}
+                  className="hidden"
+                />
+                <div 
+                  className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all rounded-2xl cursor-pointer"
+                  onClick={() => handleImageClick('avatar')}
+                >
+                  {uploading.type === 'avatar' && uploading.loading ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  )}
+                </div>
+              </div>
+            </div>
 
-  {/* Cover Image Upload */}
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-3">
-      Cover Image
-    </label>
-    <div className="relative group">
-      <div className="h-32 rounded-2xl border-2 border-dashed border-gray-300 overflow-hidden">
-        {formData.coverImage?.url ? (
-          <img
-            src={formData.coverImage.url}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <Camera className="w-8 h-8 text-gray-400" />
+            {/* Cover Image Upload */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Cover Image
+                {uploading.type === 'coverImage' && uploading.loading && (
+                  <span className="text-blue-600 text-xs ml-2">Uploading...</span>
+                )}
+              </label>
+              <div className="relative group">
+                <div 
+                  className="h-32 rounded-2xl border-2 border-dashed border-gray-300 overflow-hidden cursor-pointer"
+                  onClick={() => handleImageClick('coverImage')}
+                >
+                  {formData.coverImage?.url ? (
+                    <img
+                      src={formData.coverImage.url}
+                      alt="Cover"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={coverFileInputRef}
+                  accept="image/*"
+                  onChange={(e) => handleImageChange(e, 'coverImage')}
+                  className="hidden"
+                />
+                <div 
+                  className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all rounded-2xl cursor-pointer"
+                  onClick={() => handleImageClick('coverImage')}
+                >
+                  {uploading.type === 'coverImage' && uploading.loading ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => handleImageChange(e, 'coverImage')}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all rounded-2xl">
-        <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-    </div>
-  </div>
-</div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">

@@ -152,7 +152,7 @@ export default function Analytics() {
           
           <motion.h1
             variants={itemVariants}
-            className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-4"
+            className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-4"
           >
             Performance Analytics
           </motion.h1>

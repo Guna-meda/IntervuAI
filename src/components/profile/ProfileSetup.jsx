@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, Briefcase, FileText, Plus, X, Save, Globe, Github, Linkedin } from 'lucide-react';
+import { User, Briefcase, FileText, Plus, X, Save, Globe, Github, Linkedin, Camera } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import ProfileService from '../../services/profileService';
 
 export default function ProfileSetup({ onSave, onComplete }) {
   const { user: firebaseUser, mongoUser, setUser } = useAuthStore();
@@ -16,7 +17,9 @@ export default function ProfileSetup({ onSave, onComplete }) {
     website: '',
     skills: [],
     experience: [],
-    resumeText: ''
+    resumeText: '',
+    avatar: null,
+    coverImage: null
   });
 
   const [currentSkill, setCurrentSkill] = useState('');
@@ -29,6 +32,11 @@ export default function ProfileSetup({ onSave, onComplete }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState({ type: null, loading: false });
+  
+  // Proper ref initialization
+  const avatarFileInputRef = useRef(null);
+  const coverFileInputRef = useRef(null);
 
   const addSkill = () => {
     if (currentSkill.trim() && !formData.skills.includes(currentSkill.trim())) {
@@ -70,6 +78,37 @@ export default function ProfileSetup({ onSave, onComplete }) {
     }));
   };
 
+  const handleImageChange = async (event, imageType) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading({ type: imageType, loading: true });
+
+    try {
+      const result = await ProfileService.uploadImage(file, imageType);
+      
+      setFormData(prev => ({
+        ...prev,
+        [imageType]: result.data
+      }));
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError('Failed to upload image');
+    } finally {
+      setUploading({ type: null, loading: false });
+    }
+  };
+
+  // Handler to trigger file input
+  const handleImageClick = (imageType) => {
+    if (imageType === 'avatar' && avatarFileInputRef.current) {
+      avatarFileInputRef.current.click();
+    } else if (imageType === 'coverImage' && coverFileInputRef.current) {
+      coverFileInputRef.current.click();
+    }
+  };
+
   const handleSubmit = async () => {
     if (!isFormValid) return;
 
@@ -77,13 +116,16 @@ export default function ProfileSetup({ onSave, onComplete }) {
     setError('');
 
     try {
+      // Use ProfileService to save the profile
+      const updatedUser = await ProfileService.setupProfile(formData);
+      
       const updatedMongoUser = {
         ...(mongoUser || {}),
         profileSetup: true,
         profile: { ...formData },
       };
 
-      setUser(firebaseUser, updatedMongoUser);
+      setUser(firebaseUser, updatedUser.data || updatedMongoUser);
 
       if (typeof onSave === 'function') {
         await onSave(formData);
@@ -143,7 +185,94 @@ export default function ProfileSetup({ onSave, onComplete }) {
             </div>
           )}
 
-          <div className="space-y-4 mb-6">
+          <div className="space-y-6">
+            {/* Image Upload Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Avatar Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Profile Picture
+                </label>
+                <div className="relative group">
+                  <div 
+                    className="w-32 h-32 rounded-2xl border-2 border-dashed border-gray-300 overflow-hidden mx-auto cursor-pointer"
+                    onClick={() => handleImageClick('avatar')}
+                  >
+                    {formData.avatar?.url ? (
+                      <img
+                        src={formData.avatar.url}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <User className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={avatarFileInputRef}
+                    accept="image/*"
+                    onChange={(e) => handleImageChange(e, 'avatar')}
+                    className="hidden"
+                  />
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all rounded-2xl cursor-pointer"
+                    onClick={() => handleImageClick('avatar')}
+                  >
+                    {uploading.type === 'avatar' && uploading.loading ? (
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cover Image Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Cover Image
+                </label>
+                <div className="relative group">
+                  <div 
+                    className="h-32 rounded-2xl border-2 border-dashed border-gray-300 overflow-hidden cursor-pointer"
+                    onClick={() => handleImageClick('coverImage')}
+                  >
+                    {formData.coverImage?.url ? (
+                      <img
+                        src={formData.coverImage.url}
+                        alt="Cover"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <Camera className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={coverFileInputRef}
+                    accept="image/*"
+                    onChange={(e) => handleImageChange(e, 'coverImage')}
+                    className="hidden"
+                  />
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all rounded-2xl cursor-pointer"
+                    onClick={() => handleImageClick('coverImage')}
+                  >
+                    {uploading.type === 'coverImage' && uploading.loading ? (
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Full Name *
@@ -256,165 +385,165 @@ export default function ProfileSetup({ onSave, onComplete }) {
                 />
               </div>
             </div>
-          </div>
 
-          {/* Skills */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Skills *
-            </label>
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={currentSkill}
-                onChange={(e) => setCurrentSkill(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
-                placeholder="Add a skill (e.g. React, Node.js)"
-              />
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={addSkill}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Add
-              </motion.button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.skills.map((skill, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm"
+            {/* Skills */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Skills *
+              </label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={currentSkill}
+                  onChange={(e) => setCurrentSkill(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                  placeholder="Add a skill (e.g. React, Node.js)"
+                />
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={addSkill}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
-                  {skill}
-                  <button
-                    onClick={() => removeSkill(skill)}
-                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                  Add
+                </motion.button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.skills.map((skill, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm"
                   >
-                    ×
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-            {formData.skills.length === 0 && (
-              <p className="text-sm text-gray-500 mt-2">Add at least one skill</p>
-            )}
-          </div>
-
-          {/* Experience */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Experience
-            </label>
-            <div className="space-y-4 mb-3">
-              <div>
-                <input
-                  type="text"
-                  value={currentExperience.company}
-                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, company: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
-                  placeholder="Company name"
-                />
-              </div>
-              <div>
-                <input
-                  type="text"
-                  value={currentExperience.role}
-                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, role: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
-                  placeholder="Role/Title"
-                />
-              </div>
-              <div>
-                <input
-                  type="text"
-                  value={currentExperience.duration}
-                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, duration: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
-                  placeholder="Duration (e.g. Jan 2020 - Present)"
-                  onKeyPress={handleExperienceKeyPress}
-                />
-              </div>
-              <div>
-                <textarea
-                  value={currentExperience.description}
-                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
-                  placeholder="Description of responsibilities and achievements"
-                  rows={3}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={currentExperience.current}
-                  onChange={(e) => setCurrentExperience(prev => ({ ...prev, current: e.target.checked }))}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label className="text-sm text-gray-700">Current position</label>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={addExperience}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Add Experience
-              </motion.button>
-            </div>
-            <div className="space-y-2">
-              {formData.experience.map((exp, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="p-3 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{exp.role}</p>
-                      <p className="text-sm text-gray-600">{exp.company}</p>
-                      <p className="text-sm text-gray-500">{exp.duration}</p>
-                      <p className="text-sm text-gray-700 mt-1">{exp.description}</p>
-                      {exp.current && (
-                        <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                          Current
-                        </span>
-                      )}
-                    </div>
+                    {skill}
                     <button
-                      onClick={() => removeExperience(idx)}
-                      className="text-red-600 hover:text-red-800 transition-colors"
+                      onClick={() => removeSkill(skill)}
+                      className="text-blue-600 hover:text-blue-800 transition-colors"
                     >
-                      <X className="w-4 h-4" />
+                      ×
                     </button>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ))}
+              </div>
+              {formData.skills.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">Add at least one skill</p>
+              )}
             </div>
-            {formData.experience.length === 0 && (
-              <p className="text-sm text-gray-500 mt-2">No experience added yet</p>
-            )}
-          </div>
 
-          {/* Resume */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Resume Text *
-            </label>
-            <textarea
-              value={formData.resumeText}
-              onChange={(e) => setFormData(prev => ({ ...prev, resumeText: e.target.value }))}
-              rows={6}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
-              placeholder="Paste your resume content here. Include your experience, education, skills, and achievements..."
-            />
-            <p className="text-sm text-gray-500 mt-2">
-              This will help us provide personalized interview questions and feedback
-            </p>
+            {/* Experience */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Experience
+              </label>
+              <div className="space-y-4 mb-3">
+                <div>
+                  <input
+                    type="text"
+                    value={currentExperience.company}
+                    onChange={(e) => setCurrentExperience(prev => ({ ...prev, company: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                    placeholder="Company name"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={currentExperience.role}
+                    onChange={(e) => setCurrentExperience(prev => ({ ...prev, role: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                    placeholder="Role/Title"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={currentExperience.duration}
+                    onChange={(e) => setCurrentExperience(prev => ({ ...prev, duration: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                    placeholder="Duration (e.g. Jan 2020 - Present)"
+                    onKeyPress={handleExperienceKeyPress}
+                  />
+                </div>
+                <div>
+                  <textarea
+                    value={currentExperience.description}
+                    onChange={(e) => setCurrentExperience(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none"
+                    placeholder="Description of responsibilities and achievements"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={currentExperience.current}
+                    onChange={(e) => setCurrentExperience(prev => ({ ...prev, current: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label className="text-sm text-gray-700">Current position</label>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={addExperience}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Add Experience
+                </motion.button>
+              </div>
+              <div className="space-y-2">
+                {formData.experience.map((exp, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{exp.role}</p>
+                        <p className="text-sm text-gray-600">{exp.company}</p>
+                        <p className="text-sm text-gray-500">{exp.duration}</p>
+                        <p className="text-sm text-gray-700 mt-1">{exp.description}</p>
+                        {exp.current && (
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                            Current
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeExperience(idx)}
+                        className="text-red-600 hover:text-red-800 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              {formData.experience.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">No experience added yet</p>
+              )}
+            </div>
+
+            {/* Resume */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Resume Text *
+              </label>
+              <textarea
+                value={formData.resumeText}
+                onChange={(e) => setFormData(prev => ({ ...prev, resumeText: e.target.value }))}
+                rows={6}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
+                placeholder="Paste your resume content here. Include your experience, education, skills, and achievements..."
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                This will help us provide personalized interview questions and feedback
+              </p>
+            </div>
           </div>
 
           <motion.button
@@ -422,7 +551,7 @@ export default function ProfileSetup({ onSave, onComplete }) {
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
             disabled={!isFormValid || saving}
-            className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
           >
             {saving ? (
               <>

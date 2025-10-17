@@ -1,91 +1,135 @@
-import React, { useState, useEffect } from 'react';
+// components/profile/ProfileView.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mail, Briefcase, Calendar, Award, Target, 
-  TrendingUp, Edit2, Save, Plus, FileText, 
-  Upload, Check, Camera, Building, Linkedin,
-  Github, Globe, Copy, CheckCircle2, User
+  TrendingUp, Edit2, Plus, FileText, Upload, 
+  Check, Camera, Building, Linkedin, Github, 
+  Globe, Copy, CheckCircle2, User, Zap,
+  Rocket, Crown, Star, Download, Share,
+  BarChart3, Video
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useUserStore } from '../../store/userStore';
+import ProfileService from '../../services/profileService';
 import ProfileEditDialog from './ProfileEditDialog';
 
 export default function ProfileView() {
-  const { mongoUser, user: firebaseUser } = useAuthStore();
-  const [isEditing, setIsEditing] = useState(false);
+  const { mongoUser, user: firebaseUser, setUser } = useAuthStore();
+  const { userStats, fetchUserStats } = useUserStore();
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [resumeText, setResumeText] = useState('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+  const [uploading, setUploading] = useState({ type: null, loading: false });
+  const fileInputRef = useRef({ avatar: null, cover: null });
+  const avatarFileInputRef = useRef(null);
+const coverFileInputRef = useRef(null);
+
   const profile = mongoUser?.profile || {};
-  const userStats = mongoUser?.stats || {};
+  const avatarUrl = profile.avatar?.url;
+  const coverUrl = profile.coverImage?.url;
   const userSkills = profile?.skills || [];
   const userExperience = profile?.experience || [];
-
-  const stats = [
-    { icon: Target, label: 'Interviews', value: userStats.interviews || '0', color: 'bg-blue-50 text-blue-600' },
-    { icon: TrendingUp, label: 'Success Rate', value: `${userStats.successRate || '0'}%`, color: 'bg-green-50 text-green-600' },
-    { icon: Award, label: 'Certificates', value: userStats.certificates || '0', color: 'bg-amber-50 text-amber-600' },
-    { icon: Briefcase, label: 'Projects', value: userStats.projects || '0', color: 'bg-purple-50 text-purple-600' },
-  ];
 
   useEffect(() => {
     if (profile?.resumeText) {
       setResumeText(profile.resumeText);
     }
+    loadUserStats();
   }, [profile?.resumeText]);
+
+  const loadUserStats = async () => {
+    try {
+      await fetchUserStats();
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    }
+  };
+
+  const stats = [
+    { 
+      icon: Target, 
+      label: 'Interviews', 
+      value: userStats?.interviews || '0', 
+      color: 'from-blue-500 to-cyan-500',
+      bgColor: 'bg-blue-50/50'
+    },
+    { 
+      icon: TrendingUp, 
+      label: 'Success Rate', 
+      value: `${userStats?.successRate || '0'}%`, 
+      color: 'from-emerald-500 to-green-500',
+      bgColor: 'bg-emerald-50/50'
+    },
+    { 
+      icon: Award, 
+      label: 'Certificates', 
+      value: userStats?.certificates || '0', 
+      color: 'from-amber-500 to-orange-500',
+      bgColor: 'bg-amber-50/50'
+    },
+    { 
+      icon: Briefcase, 
+      label: 'Projects', 
+      value: userStats?.projects || '0', 
+      color: 'from-purple-500 to-pink-500',
+      bgColor: 'bg-purple-50/50'
+    },
+  ];
+
+  const handleImageUpload = async (file, type) => {
+    if (!file) return;
+    
+    setUploading({ type, loading: true });
+    
+    try {
+      const result = await ProfileService.uploadImage(file, type);
+      
+      // Update local state
+      const updatedUser = {
+        ...mongoUser,
+        profile: {
+          ...profile,
+          [type]: result.data
+        }
+      };
+      
+      setUser(firebaseUser, updatedUser);
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    } finally {
+      setUploading({ type: null, loading: false });
+    }
+  };
+
+  const handleFileSelect = (event, type) => {
+    const file = event.target.files[0];
+    if (file) {
+      handleImageUpload(file, type);
+    }
+  };
+
+  const handleImageClick = (imageType) => {
+  if (imageType === 'avatar' && avatarFileInputRef.current) {
+    avatarFileInputRef.current.click();
+  } else if (imageType === 'coverImage' && coverFileInputRef.current) {
+    coverFileInputRef.current.click();
+  }
+};
 
   const handleSaveResume = async () => {
     setLoading(true);
     try {
-      const idToken = await firebaseUser.getIdToken(true);
-      const response = await fetch("http://localhost:3001/api/v1/users/update-profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ resumeText: resumeText }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update resume');
-      
-      const updatedUser = await response.json();
-      useAuthStore.getState().setUser(firebaseUser, updatedUser.data || updatedUser);
+      await ProfileService.updateProfile({ resumeText });
       setShowResumeDialog(false);
     } catch (error) {
       console.error('Error saving resume:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEditProfile = async () => {
-    if (isEditing) {
-      setLoading(true);
-      try {
-        const idToken = await firebaseUser.getIdToken(true);
-        const response = await fetch("http://localhost:3001/api/v1/users/update-profile", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify(profile),
-        });
-
-        if (!response.ok) throw new Error('Failed to update profile');
-        
-        const updatedUser = await response.json();
-        useAuthStore.getState().setUser(firebaseUser, updatedUser);
-      } catch (error) {
-        console.error('Error updating profile:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    setIsEditing(!isEditing);
   };
 
   const copyToClipboard = (text) => {
@@ -101,315 +145,520 @@ export default function ProfileView() {
     return 'U';
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
+
   if (!mongoUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading profile...</div>
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-cyan-50/30 to-blue-50/20 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-3 border-cyan-200 border-t-cyan-500 rounded-full mx-auto mb-4"
+          />
+          <p className="text-slate-600 font-medium">Loading your profile...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8"
-        >
-          {/* Cover Photo Section */}
-          <div className="relative h-32 bg-gradient-to-r from-gray-100 to-gray-200">
-            <div className="absolute inset-0 bg-black/5" />
-            <button className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-sm rounded-lg text-gray-600 hover:bg-white transition-colors">
-              <Camera className="w-4 h-4" />
-            </button>
-            <div className="absolute -bottom-6 left-8">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl font-semibold border-4 border-white shadow-lg">
-                  {getInitial()}
-                </div>
-                <button className="absolute -bottom-1 -right-1 p-1.5 bg-white rounded-lg shadow-md text-gray-600 hover:bg-gray-50">
-                  <Camera className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-cyan-50/30 to-blue-50/20">
+      {/* Header Section */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="relative"
+      >
+        {/* Cover Image */}
+        <div className="relative h-64 md:h-80 bg-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
+  {coverUrl ? (
+    <img
+      src={coverUrl}
+      alt="Cover"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <div className="w-full h-full bg-gradient-to-r from-blue-500/20 to-purple-600/20" />
+  )}
+  
+  {/* Cover Image Upload Overlay - FIXED */}
+  <div 
+    className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-all duration-300 group cursor-pointer"
+    onClick={() => handleImageClick('coverImage')}
+  >
+    <input
+      type="file"
+      ref={coverFileInputRef}
+      onChange={(e) => handleFileSelect(e, 'coverImage')}
+      accept="image/*"
+      className="hidden"
+    />
+    <button
+      onClick={() => handleImageClick('coverImage')}
+      disabled={uploading.loading}
+      className="absolute top-6 right-6 p-3 bg-white/90 backdrop-blur-sm rounded-2xl text-gray-600 hover:bg-white hover:scale-105 transition-all opacity-0 group-hover:opacity-100 shadow-lg"
+    >
+      {uploading.type === 'coverImage' ? (
+        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      ) : (
+        <Camera className="w-5 h-5" />
+      )}
+    </button>
+  </div>
+</div>
 
-          {/* Profile Info */}
-          <div className="pt-8 px-8 pb-6">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {profile?.fullName || mongoUser?.displayName || 'User'}
-                  </h1>
-                  <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
+// Update the avatar section:
+<div className="relative">
+  <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl border-4 border-white bg-white shadow-2xl overflow-hidden cursor-pointer">
+    {avatarUrl ? (
+      <img
+        src={avatarUrl}
+        alt="Profile"
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <div 
+        className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-4xl font-bold"
+        onClick={() => handleImageClick('avatar')}
+      >
+        {getInitial()}
+      </div>
+    )}
+  </div>
+  
+  {/* Avatar Upload Overlay - FIXED */}
+  <div 
+    className="absolute inset-0 rounded-3xl bg-black/0 hover:bg-black/30 transition-all duration-300 group cursor-pointer"
+    onClick={() => handleImageClick('avatar')}
+  >
+    <input
+      type="file"
+      ref={avatarFileInputRef}
+      onChange={(e) => handleFileSelect(e, 'avatar')}
+      accept="image/*"
+      className="hidden"
+    />
+    <button
+      onClick={() => handleImageClick('avatar')}
+      disabled={uploading.loading}
+      className="absolute bottom-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-xl text-gray-600 hover:bg-white hover:scale-105 transition-all opacity-0 group-hover:opacity-100 shadow-md"
+    >
+      {uploading.type === 'avatar' ? (
+        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      ) : (
+        <Camera className="w-4 h-4" />
+      )}
+    </button>
+  </div>
+</div>
+
+        {/* Profile Info Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 md:p-8">
+            <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
+              {/* Avatar */}
+              <div className="relative -mt-24 md:-mt-28">
+                <div className="relative">
+                  <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl border-4 border-white bg-white shadow-2xl overflow-hidden">
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-4xl font-bold">
+                        {getInitial()}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Avatar Upload Overlay */}
+                  <div className="absolute inset-0 rounded-3xl bg-black/0 hover:bg-black/30 transition-all duration-300 group">
+                    <input
+                      type="file"
+                      ref={el => fileInputRef.current.avatar = el}
+                      onChange={(e) => handleFileSelect(e, 'avatar')}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current.avatar?.click()}
+                      disabled={uploading.loading}
+                      className="absolute bottom-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-xl text-gray-600 hover:bg-white hover:scale-105 transition-all opacity-0 group-hover:opacity-100 shadow-md"
+                    >
+                      {uploading.type === 'avatar' ? (
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Camera className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
-                <p className="text-gray-600 font-medium">{profile?.role || 'Add your role'}</p>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                  {profile?.company && (
-                    <div className="flex items-center gap-1.5">
-                      <Building className="w-4 h-4" />
-                      <span>{profile.company}</span>
+              </div>
+
+              {/* Profile Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="space-y-3 flex-1 min-w-0">
+                    <div className="space-y-2">
+                      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">
+                        {profile.fullName || mongoUser.displayName || 'User'}
+                      </h1>
+                      <p className="text-lg text-gray-600 font-medium">
+                        {profile.role || 'Add your role'}
+                      </p>
                     </div>
-                  )}
-                  {profile?.joinDate && (
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4" />
-                      <span>Joined {profile.joinDate}</span>
+                    
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                      {profile.company && (
+                        <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+                          <Building className="w-4 h-4" />
+                          <span>{profile.company}</span>
+                        </div>
+                      )}
+                      {profile.joinDate && (
+                        <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+                          <Calendar className="w-4 h-4" />
+                          <span>Joined {profile.joinDate}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 bg-emerald-100 px-3 py-1.5 rounded-full">
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        <span className="text-emerald-700 font-medium">Verified</span>
+                      </div>
                     </div>
-                  )}
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowEditDialog(true)}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold flex items-center gap-2 hover:shadow-lg transition-all shadow-md"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit Profile
+                  </motion.button>
                 </div>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowEditDialog(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-                Edit Profile
-              </motion.button>
             </div>
           </div>
-        </motion.div>
+        </div>
+      </motion.div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          {/* Left Column - Main Content */}
+          <div className="xl:col-span-3 space-y-8">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
               {stats.map((stat, idx) => (
                 <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+                  key={stat.label}
+                  variants={itemVariants}
+                  custom={idx}
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg relative overflow-hidden group cursor-pointer"
+                  whileHover={{ y: -4, scale: 1.02 }}
                 >
-                  <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center mb-3`}>
-                    <stat.icon className="w-5 h-5" />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5 group-hover:opacity-10 transition-opacity`} />
+                  
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} shadow-sm`}>
+                        <stat.icon className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                    
+                    <p className="text-slate-600 text-sm mb-1 font-medium">{stat.label}</p>
+                    <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                    
+                    {/* Animated progress bar */}
+                    <div className="mt-3 w-full bg-slate-200 rounded-full h-1">
+                      <motion.div
+                        className={`h-1 rounded-full bg-gradient-to-r ${stat.color}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: '75%' }}
+                        transition={{ delay: idx * 0.2 + 0.5, duration: 1 }}
+                      />
+                    </div>
                   </div>
-                  <div className="text-xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                  <div className="text-sm text-gray-600">{stat.label}</div>
                 </motion.div>
               ))}
-            </div>
-
-            {/* About Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">About</h2>
-                {isEditing && (
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              <p className="text-gray-700 leading-relaxed">
-                {profile?.bio || 'Add a bio to tell others about yourself...'}
-              </p>
             </motion.div>
+
+            {/* About & Skills Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* About Section */}
+              <motion.div
+                variants={itemVariants}
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-cyan-100 rounded-xl">
+                    <User className="w-5 h-5 text-cyan-600" />
+                  </div>
+                  <h2 className="font-semibold text-slate-900 text-lg">About Me</h2>
+                </div>
+                <p className="text-slate-700 leading-relaxed">
+                  {profile.bio || 'Add a bio to tell others about yourself and your professional journey...'}
+                </p>
+              </motion.div>
+
+              {/* Skills Section */}
+              <motion.div
+                variants={itemVariants}
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-xl">
+                      <Zap className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <h2 className="font-semibold text-slate-900 text-lg">Skills & Expertise</h2>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowEditDialog(true)}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded-lg transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </motion.button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {userSkills.length > 0 ? (
+                    userSkills.map((skill, idx) => (
+                      <motion.span
+                        key={idx}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="px-3 py-2 bg-gradient-to-r from-cyan-50 to-blue-50 text-cyan-700 rounded-xl text-sm font-medium border border-cyan-200/60 shadow-xs hover:shadow-sm transition-all cursor-pointer"
+                      >
+                        {skill}
+                      </motion.span>
+                    ))
+                  ) : (
+                    <p className="text-slate-500">No skills added yet</p>
+                  )}
+                </div>
+              </motion.div>
+            </div>
 
             {/* Experience Section */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+              variants={itemVariants}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Experience</h2>
-                {isEditing && (
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <Plus className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              {userExperience.length > 0 ? (
-                userExperience.map((exp, idx) => (
-                  <div key={idx} className="mb-4 last:mb-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold text-gray-900">{exp.role}</h3>
-                      {exp.current && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                          Current
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">{exp.company}</p>
-                    <p className="text-sm text-gray-500">{exp.duration}</p>
-                    <p className="text-sm text-gray-700 mt-1">{exp.description}</p>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 rounded-xl">
+                    <Briefcase className="w-5 h-5 text-amber-600" />
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm">No experience added yet</p>
-              )}
-            </motion.div>
-
-            {/* Skills Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Skills & Expertise</h2>
-                {isEditing && (
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <Plus className="w-4 h-4" />
-                  </button>
-                )}
+                  <h2 className="font-semibold text-slate-900 text-lg">Experience</h2>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowEditDialog(true)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded-lg transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                </motion.button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {userSkills.length > 0 ? (
-                  userSkills.map((skill, idx) => (
-                    <span
+              <div className="space-y-4">
+                {userExperience.length > 0 ? (
+                  userExperience.map((exp, idx) => (
+                    <motion.div
                       key={idx}
-                      className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-100"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="p-4 rounded-xl bg-gradient-to-r from-slate-50/50 to-blue-50/30 border border-slate-200/40 hover:border-cyan-200/60 transition-all group"
                     >
-                      {skill}
-                    </span>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-slate-900 text-base">{exp.role}</h3>
+                            {exp.current && (
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full font-medium">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-slate-600 text-sm">{exp.company}</p>
+                          <p className="text-slate-500 text-xs">{exp.duration}</p>
+                          {exp.description && (
+                            <p className="text-slate-700 text-sm leading-relaxed">{exp.description}</p>
+                          )}
+                        </div>
+                        <Building className="w-5 h-5 text-slate-400 group-hover:text-cyan-500 transition-colors" />
+                      </div>
+                    </motion.div>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-sm">No skills added yet</p>
+                  <p className="text-slate-500 text-center py-4">No experience added yet</p>
                 )}
               </div>
             </motion.div>
 
             {/* Resume Section */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+              variants={itemVariants}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg"
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <div className="p-2 bg-blue-100 rounded-xl">
                     <FileText className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Resume</h2>
-                    <p className="text-sm text-gray-500">Manage your resume content</p>
+                    <h2 className="font-semibold text-slate-900 text-lg">AI Resume</h2>
+                    <p className="text-slate-500 text-sm">Powered by our AI analysis</p>
                   </div>
                 </div>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setShowResumeDialog(true)}
-                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-medium flex items-center gap-2 hover:shadow-lg transition-all text-sm"
                 >
-                  <Plus className="w-4 h-4" />
-                </button>
+                  {profile?.resumeText ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {profile?.resumeText ? 'Edit' : 'Add'} Resume
+                </motion.button>
               </div>
+
               {profile?.resumeText ? (
                 <div className="space-y-4">
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-green-700 mb-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span className="font-medium text-sm">Resume Added</span>
+                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/60 rounded-xl">
+                    <div className="flex items-center gap-2 text-emerald-700 mb-2">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-semibold text-sm">Resume Analyzed & Ready</span>
                     </div>
-                    <p className="text-sm text-gray-600 line-clamp-2">{profile.resumeText}</p>
+                    <p className="text-slate-700 text-sm line-clamp-3">{profile.resumeText}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button
+                  <div className="flex gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setShowResumeDialog(true)}
-                      className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
+                      className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-all text-sm"
                     >
-                      Edit
-                    </button>
-                    <button
+                      Edit Content
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => copyToClipboard(profile.resumeText)}
-                      className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm flex items-center justify-center gap-1"
+                      className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-all text-sm flex items-center justify-center gap-2"
                     >
-                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      {copied ? 'Copied!' : 'Copy'}
-                    </button>
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copied ? 'Copied!' : 'Copy Text'}
+                    </motion.button>
                   </div>
                 </div>
               ) : (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setShowResumeDialog(true)}
-                  className="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all group"
+                  className="w-full p-8 border-2 border-dashed border-slate-300 rounded-2xl hover:border-cyan-400 hover:bg-cyan-50/30 transition-all group"
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Upload className="w-5 h-5 text-blue-600" />
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-cyan-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Upload className="w-6 h-6 text-cyan-600" />
                     </div>
                     <div className="text-center">
-                      <p className="text-gray-900 font-medium text-sm mb-1">Add Your Resume</p>
-                      <p className="text-xs text-gray-500">Paste your resume text to get started</p>
+                      <p className="text-slate-900 font-semibold text-base mb-1">Add Your Resume</p>
+                      <p className="text-slate-500 text-sm">Let AI analyze your resume for better interview questions</p>
                     </div>
                   </div>
-                </button>
+                </motion.button>
               )}
             </motion.div>
           </div>
 
-          {/* Right Column */}
+          {/* Right Column - Sidebar */}
           <div className="space-y-6">
-            {/* Contact Info */}
+            {/* Contact & Social */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100"
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-white/20 shadow-lg"
             >
-              <h3 className="font-semibold text-gray-900 mb-4">Contact</h3>
+              <h3 className="font-semibold text-slate-900 mb-4 text-lg">Contact & Social</h3>
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Mail className="w-4 h-4 text-gray-600" />
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50 border border-slate-200/40">
+                  <div className="w-10 h-10 bg-cyan-100 rounded-xl flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-cyan-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="text-sm text-gray-900 font-medium">{firebaseUser?.email}</p>
+                    <p className="text-xs text-slate-500">Email</p>
+                    <p className="text-sm text-slate-900 font-medium truncate max-w-[140px]">
+                      {firebaseUser?.email}
+                    </p>
                   </div>
                 </div>
-              </div>
-            </motion.div>
 
-            {/* Social Links */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100"
-            >
-              <h3 className="font-semibold text-gray-900 mb-4">Social Profiles</h3>
-              <div className="space-y-2">
+                {/* Social Links */}
                 {[
                   { icon: Linkedin, label: 'LinkedIn', value: profile.linkedin, color: 'bg-blue-600' },
-                  { icon: Github, label: 'GitHub', value: profile.github, color: 'bg-gray-800' },
-                  { icon: Globe, label: 'Website', value: profile.website, color: 'bg-blue-500' },
+                  { icon: Github, label: 'GitHub', value: profile.github, color: 'bg-slate-800' },
+                  { icon: Globe, label: 'Website', value: profile.website, color: 'bg-cyan-500' },
                 ].map((social, idx) => (
                   social.value && (
-                    <a
+                    <motion.a
                       key={idx}
                       href={social.value.startsWith('http') ? social.value : `https://${social.value}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                      whileHover={{ scale: 1.02 }}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50 border border-slate-200/40 hover:border-cyan-200/60 transition-all group"
                     >
-                      <div className={`w-8 h-8 ${social.color} rounded-lg flex items-center justify-center`}>
-                        <social.icon className="w-4 h-4 text-white" />
+                      <div className={`w-10 h-10 ${social.color} rounded-xl flex items-center justify-center`}>
+                        <social.icon className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">{social.label}</p>
-                        <p className="text-sm text-gray-900 font-medium group-hover:text-blue-600 transition-colors truncate max-w-[120px]">
+                        <p className="text-xs text-slate-500">{social.label}</p>
+                        <p className="text-sm text-slate-900 font-medium group-hover:text-cyan-600 transition-colors truncate max-w-[120px]">
                           {social.value.replace(/^https?:\/\//, '')}
                         </p>
                       </div>
-                    </a>
+                    </motion.a>
                   )
                 ))}
-                {!profile.linkedin && !profile.github && !profile.website && (
-                  <p className="text-gray-500 text-sm text-center py-3">No social links added</p>
-                )}
               </div>
             </motion.div>
 
@@ -417,20 +666,75 @@ export default function ProfileView() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-5 text-white"
+              transition={{ delay: 0.1 }}
+              className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden"
             >
-              <h3 className="font-semibold mb-3">Quick Actions</h3>
-              <div className="space-y-2">
-                <button className="w-full p-2.5 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors text-left text-sm font-medium">
-                  Download CV
-                </button>
-                <button className="w-full p-2.5 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors text-left text-sm font-medium">
-                  Share Profile
-                </button>
-                <button className="w-full p-2.5 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors text-left text-sm font-medium">
-                  View Analytics
-                </button>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <Rocket className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Quick Actions</h3>
+                    <p className="text-cyan-100 text-sm opacity-90">Jump back in</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { icon: Video, label: 'New Interview', color: 'bg-white/20' },
+                    { icon: Download, label: 'Export CV', color: 'bg-white/20' },
+                    { icon: Share, label: 'Share Profile', color: 'bg-white/20' },
+                    { icon: BarChart3, label: 'Analytics', color: 'bg-white/20' },
+                  ].map((action, idx) => (
+                    <motion.button
+                      key={action.label}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all"
+                    >
+                      <div className={`p-2 rounded-lg ${action.color}`}>
+                        <action.icon className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-medium">{action.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Achievement Badge */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-white/20 shadow-lg relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-amber-100/30 rounded-full -translate-y-8 translate-x-8" />
+              
+              <div className="relative z-10">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/25">
+                    <Crown className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-2">Current Level</h4>
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                      <span className="font-bold text-amber-600">Expert </span>
+                      • {userStats?.interviews || 0} interviews completed
+                    </p>
+                    <div className="mt-2 w-full bg-slate-200 rounded-full h-1">
+                      <motion.div
+                        className="h-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(((userStats?.interviews || 0) / 20) * 100, 100)}%` }}
+                        transition={{ delay: 0.8, duration: 1 }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -450,78 +754,89 @@ export default function ProfileView() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+              className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden border border-cyan-200/40"
             >
-              <div className="border-b border-gray-200 p-6">
+              <div className="border-b border-slate-200/40 p-6 bg-gradient-to-r from-cyan-500/5 to-blue-500/5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        {profile?.resumeText ? 'Edit Resume' : 'Add Resume'}
+                      <h2 className="text-xl font-bold text-slate-900">
+                        {profile?.resumeText ? 'Edit AI Resume' : 'Add AI Resume'}
                       </h2>
-                      <p className="text-sm text-gray-500">Paste your resume content below</p>
+                      <p className="text-slate-600 text-sm">Let our AI analyze your resume for better interview preparation</p>
                     </div>
                   </div>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => setShowResumeDialog(false)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
                   >
-                    <Plus className="w-5 h-5 transform rotate-45 text-gray-400" />
-                  </button>
+                    <Plus className="w-5 h-5 text-slate-400 transform rotate-45" />
+                  </motion.button>
                 </div>
               </div>
 
               <div className="p-6 max-h-[50vh] overflow-y-auto">
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Resume Text
+                    <label className="block text-sm font-semibold text-slate-900 mb-3">
+                      Resume Content
                     </label>
                     <textarea
                       value={resumeText}
                       onChange={(e) => setResumeText(e.target.value)}
-                      placeholder="Paste your resume text here...\n\nInclude your experience, education, skills, and achievements."
-                      className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-gray-800 placeholder-gray-400 text-sm"
+                      placeholder="Paste your complete resume text here...\n\nInclude:\n• Work experience\n• Education\n• Skills\n• Projects\n• Achievements\n\nOur AI will analyze this to create personalized interview questions."
+                      className="w-full h-64 px-4 py-3 border border-slate-300 rounded-2xl focus:border-cyan-500 focus:ring-3 focus:ring-cyan-100 outline-none transition-all resize-none text-slate-800 placeholder-slate-400 text-sm leading-relaxed"
                     />
                   </div>
-                  <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-white text-xs font-bold">i</span>
+                  
+                  <div className="flex items-start gap-3 p-4 bg-cyan-50 border border-cyan-200 rounded-2xl">
+                    <div className="w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3 h-3 text-white" />
                     </div>
-                    <p className="text-sm text-gray-700">
-                      Your resume will be used by our AI to provide personalized interview questions and feedback.
-                    </p>
+                    <div>
+                      <p className="text-cyan-800 font-medium text-sm mb-1">AI-Powered Analysis</p>
+                      <p className="text-cyan-700 text-sm">
+                        Your resume will be analyzed to identify key skills, experience, and create tailored interview questions that match your background.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 p-6 flex gap-3">
-                <button
+              <div className="border-t border-slate-200/40 p-6 bg-slate-50/50 flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setShowResumeDialog(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                  className="flex-1 px-6 py-3.5 bg-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-300 transition-all"
                 >
                   Cancel
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleSaveResume}
                   disabled={!resumeText.trim() || loading}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Save className="w-4 h-4" />
+                    <Check className="w-5 h-5" />
                   )}
-                  {loading ? 'Saving...' : 'Save Resume'}
-                </button>
+                  {loading ? 'Analyzing...' : 'Save & Analyze'}
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
       <AnimatePresence>
         {showEditDialog && (
           <ProfileEditDialog

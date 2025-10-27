@@ -15,6 +15,7 @@ import useAuthStore from '../store/authStore';
 import { useUserStore } from '../store/userStore';
 import { getUserInterviews, getInterviewStats } from '../services/interviewService';
 import ProfileEditDialog from '../components/profile/ProfileEditDialog';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
 
 export default function ProfileView() {
   const { mongoUser, user: firebaseUser } = useAuthStore();
@@ -72,7 +73,7 @@ export default function ProfileView() {
     setLoading(true);
     try {
       const idToken = await firebaseUser.getIdToken(true);
-      const response = await fetch("http://localhost:3001/api/v1/users/update-profile", {
+  const response = await fetch(`${API_BASE_URL}/users/update-profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

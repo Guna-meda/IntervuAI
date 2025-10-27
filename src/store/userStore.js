@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getAnalytics, getUserInterviews } from '../services/interviewService';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
 
 export const useUserStore = create(
   persist(
@@ -22,7 +23,7 @@ export const useUserStore = create(
         set({ isLoading: true });
         try {
           const token = localStorage.getItem('token');
-          const response = await fetch('http://localhost:3001/api/v1/users/me', {
+          const response = await fetch(`${API_BASE_URL}/users/me`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -95,7 +96,7 @@ export const useUserStore = create(
       fetchUserStats: async () => {
         try {
           const token = localStorage.getItem('token');
-          const response = await fetch('http://localhost:3001/api/v1/users/stats', {
+          const response = await fetch(`${API_BASE_URL}/users/stats`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

@@ -6,6 +6,7 @@ import {
   getAuth,
 } from 'firebase/auth';
 import { auth, provider } from './config';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
 
 export const loginWithGoogle = async () => {
   try {
@@ -13,7 +14,7 @@ export const loginWithGoogle = async () => {
     const result = await signInWithPopup(auth, provider);
     const idToken = await result.user.getIdToken();
 
-    const response = await fetch('http://localhost:3001/api/v1/users/createOrFetchUser', {
+  const response = await fetch(`${API_BASE_URL}/users/createOrFetchUser`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const getCurrentUserWithToken = async () => {
 
     const idToken = await currentUser.getIdToken();
     
-    const response = await fetch('http://localhost:3001/api/v1/users/me', {
+  const response = await fetch(`${API_BASE_URL}/users/me`, {
       headers: {
         'Authorization': `Bearer ${idToken}`,
         'Content-Type': 'application/json',

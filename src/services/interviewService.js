@@ -151,7 +151,7 @@ export const getAnalytics = async () => {
 };
 
 export const getPerformanceTrends = async () => {
-  return apiCall('/analytics/trends');
+  return apiCall('/analytics/performance-trends');
 };
 
 export const getSkillAnalysis = async () => {

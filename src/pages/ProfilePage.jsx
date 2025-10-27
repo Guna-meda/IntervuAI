@@ -66,40 +66,7 @@ export default function ProfileView() {
     currentStreak: stats.currentStreak || 0,
   };
 
-  const achievementStats = [
-    { 
-      icon: Target, 
-      label: 'Total Interviews', 
-      value: realStats.interviews.toString(), 
-      change: '+12%', 
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-50/50'
-    },
-    { 
-      icon: TrendingUp, 
-      label: 'Success Rate', 
-      value: `${realStats.successRate}%`, 
-      change: '+5.2%', 
-      color: 'from-emerald-500 to-green-500',
-      bgColor: 'bg-emerald-50/50'
-    },
-    { 
-      icon: Award, 
-      label: 'Avg Score', 
-      value: `${realStats.averageScore}/10`, 
-      change: '+3.1%', 
-      color: 'from-amber-500 to-orange-500',
-      bgColor: 'bg-amber-50/50'
-    },
-    { 
-      icon: Zap, 
-      label: 'Practice Time', 
-      value: `${realStats.totalPractice}m`, 
-      change: '+28%', 
-      color: 'from-purple-500 to-pink-500',
-      bgColor: 'bg-purple-50/50'
-    },
-  ];
+
 
   const handleSaveResume = async () => {
     setLoading(true);
@@ -303,50 +270,7 @@ export default function ProfileView() {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Left Column - Main Content */}
           <div className="xl:col-span-3 space-y-8">
-            {/* Achievement Stats */}
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-            >
-              {achievementStats.map((stat, idx) => (
-                <motion.div
-                  key={stat.label}
-                  variants={itemVariants}
-                  custom={idx}
-                  className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-cyan-200/40 shadow-xs relative overflow-hidden group cursor-pointer"
-                  whileHover={{ y: -4, scale: 1.02 }}
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5 group-hover:opacity-10 transition-opacity`} />
-                  
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} shadow-sm`}>
-                        <stat.icon className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
-                        <TrendingUp className="w-3 h-3 text-emerald-600" />
-                        <span className="text-emerald-600 text-xs font-semibold">{stat.change}</span>
-                      </div>
-                    </div>
-                    
-                    <p className="text-slate-600 text-sm mb-1 font-medium">{stat.label}</p>
-                    <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
-                    
-                    {/* Animated progress bar */}
-                    <div className="mt-3 w-full bg-slate-200 rounded-full h-1">
-                      <motion.div
-                        className={`h-1 rounded-full bg-gradient-to-r ${stat.color}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: '75%' }}
-                        transition={{ delay: idx * 0.2 + 0.5, duration: 1 }}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
+            
 
             {/* About & Skills Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -11,7 +11,7 @@ import { auth, provider } from './config';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
 
-const isMobile = () => window.innerWidth < 640 || 'ontouchstart' in window;
+const isMobile = () => /Mobi|Android/i.test(navigator.userAgent);
 
 const performGoogleSignIn = async () => {
   const signInFn = isMobile() ? signInWithRedirect : signInWithPopup;
@@ -21,7 +21,14 @@ const performGoogleSignIn = async () => {
 
 export const loginWithGoogle = async () => {
   try {
-    const result = await performGoogleSignIn();
+    if (isMobile()) {
+      console.log('📱 Using redirect flow...');
+      await signInWithRedirect(auth, provider);
+      return; // 🔥 Don't proceed further here
+    }
+
+    console.log('💻 Using popup flow...');
+    const result = await signInWithPopup(auth, provider);
     const idToken = await result.user.getIdToken();
 
     const response = await fetch(`${API_BASE_URL}/users/createOrFetchUser`, {
@@ -37,9 +44,7 @@ export const loginWithGoogle = async () => {
       }),
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to create/fetch user in MongoDB');
-    }
+    if (!response.ok) throw new Error('Failed to create/fetch user in MongoDB');
 
     const mongoUser = await response.json();
     return { firebaseUser: result.user, mongoUser: mongoUser.data };

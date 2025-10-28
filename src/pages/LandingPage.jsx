@@ -3,19 +3,32 @@ import { motion, useInView, useAnimation } from 'framer-motion';
 import { Sparkles, Video, Zap, TrendingUp, Play, ArrowRight, Menu, X, Star, Award, Brain } from 'lucide-react';
 import interviewImg from '../assets/interview.png';
 import useAuthStore from '../store/authStore';
-import {  loginWithGoogle } from '../firebase/auth';
+import {  loginWithGoogle,getCurrentUserWithToken } from '../firebase/auth';
 
 export default function IntervuAILanding() {
 
-const { user } = useAuthStore();
+const { setUser, setLoading } = useAuthStore();
 
+useEffect(() => {
+    const finishRedirect = async () => {
+      // Firebase already has the user in `auth.currentUser` after redirect.
+      const result = await getCurrentUserWithToken();
+      if (result) {
+        setUser(result.firebaseUser, result.mongoUser);
+      }
+      setLoading(false);
+    };
 
-   const handleLogin = async () => {
+    // Run only once on mount (redirect case)
+    finishRedirect();
+  }, [setUser, setLoading]);
+
+  const handleLogin = async () => {
     try {
-      await loginWithGoogle();
-      // The redirect will happen automatically
+      await loginWithGoogle();          // ← now smart (popup / redirect)
+      // No redirect needed – the auth listener in authStore will pick it up
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error('Login failed:', error);
     }
   };
 

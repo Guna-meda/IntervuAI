@@ -3,34 +3,12 @@ import { motion, useInView, useAnimation } from 'framer-motion';
 import { Sparkles, Video, Zap, TrendingUp, Play, ArrowRight, Menu, X, Star, Award, Brain } from 'lucide-react';
 import interviewImg from '../assets/interview.png';
 import useAuthStore from '../store/authStore';
-import {  loginWithGoogle,getCurrentUserWithToken } from '../firebase/auth';
+import {  loginWithGoogle,getCurrentUserWithToken, completeRedirectLogin} from '../firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 export default function IntervuAILanding() {
 
 const { setUser, setLoading } = useAuthStore();
-
-useEffect(() => {
-    const finishRedirect = async () => {
-      // Firebase already has the user in `auth.currentUser` after redirect.
-      const result = await getCurrentUserWithToken();
-      if (result) {
-        setUser(result.firebaseUser, result.mongoUser);
-      }
-      setLoading(false);
-    };
-
-    // Run only once on mount (redirect case)
-    finishRedirect();
-  }, [setUser, setLoading]);
-
-  const handleLogin = async () => {
-    try {
-      await loginWithGoogle();          // ← now smart (popup / redirect)
-      // No redirect needed – the auth listener in authStore will pick it up
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,6 +20,44 @@ useEffect(() => {
   const ctaInView = useInView(ctaRef, { once: true, margin: '-100px' });
   const featuresControls = useAnimation();
   const ctaControls = useAnimation();
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const finishRedirect = async () => {
+      try {
+        // Step 1: Complete any pending redirect sign-in (mobile)
+        const redirectResult = await completeRedirectLogin();
+        if (redirectResult) {
+          setUser(redirectResult.firebaseUser, redirectResult.mongoUser);
+          navigate('/overview'); // ← Immediate redirect to avoid flashing landing page
+          return; // No need to continue
+        }
+
+        // Step 2: Fallback for existing sessions or popup (if needed)
+        const result = await getCurrentUserWithToken();
+        if (result) {
+          setUser(result.firebaseUser, result.mongoUser);
+          navigate('/overview');
+        }
+      } catch (error) {
+        console.error('Error finishing auth:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    finishRedirect();
+  }, [setUser, setLoading, navigate]);
+
+  const handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+      // After popup (desktop), onAuthStateChanged handles setUser
+      // After redirect (mobile), finishRedirect will handle on next load
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
 
   useEffect(() => {
     if (featuresInView) {

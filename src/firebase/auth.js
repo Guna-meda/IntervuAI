@@ -2,6 +2,7 @@
 import {
   signInWithPopup,
   signInWithRedirect,
+  getRedirectResult, 
   signOut,
   GoogleAuthProvider,
   getAuth,
@@ -11,7 +12,6 @@ import { auth, provider } from './config';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
 
 const isMobile = () => window.innerWidth < 640 || 'ontouchstart' in window;
-
 
 const performGoogleSignIn = async () => {
   const signInFn = isMobile() ? signInWithRedirect : signInWithPopup;
@@ -46,6 +46,46 @@ export const loginWithGoogle = async () => {
   } catch (error) {
     console.error('Google sign-in or MongoDB error:', error);
     throw error;
+  }
+};
+
+
+export const completeRedirectLogin = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (!result) {
+      console.log('No redirect result available');
+      return null;
+    }
+
+    console.log('Completing redirect sign-in...');
+    const idToken = await result.user.getIdToken();
+
+    const response = await fetch(`${API_BASE_URL}/users/createOrFetchUser`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create/fetch user in MongoDB');
+    }
+
+    const mongoUser = await response.json();
+    return { firebaseUser: result.user, mongoUser: mongoUser.data };
+  } catch (error) {
+    console.error('Redirect completion or MongoDB error:', error);
+    if (error.code === 'auth/web-storage-unsupported') {
+      console.warn('Browser does not support web storage');
+    }
+    return null;
   }
 };
 

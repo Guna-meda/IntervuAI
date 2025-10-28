@@ -114,6 +114,9 @@ export default function Overview() {
   const { setCurrentInterviewId } = useUserInterviewStore();
   const [loading, setLoading] = useState(true);
   const [flashcards, setFlashcards] = useState([]);
+  const [isFlashcardOpen, setIsFlashcardOpen] = useState(false);
+const [currentCardIndex, setCurrentCardIndex] = useState(0);
+const [isFlipped, setIsFlipped] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -136,39 +139,37 @@ export default function Overview() {
     }
   };
 
-  const generateFlashcards = (interviews) => {
-    // Extract questions from recent interviews to create flashcards
+const generateFlashcards = (interviews) => {
     const cards = [];
+
     interviews.forEach((interview) => {
-      interview.questions?.forEach((q) => {
-        if (cards.length < 3) {
-          // Limit to 3 cards
-          cards.push({
-            question: q.question,
-            answer:
-              q.expectedAnswer ||
-              "Review your interview feedback for detailed insights",
-            category: interview.role || "General",
-            difficulty: q.difficulty || "Medium",
-          });
-        }
+      interview.rounds?.forEach((round) => {
+        round.questions?.forEach((q) => {
+          if (cards.length >= 5) return;
+          if (q.question && q.expectedAnswer) {
+            cards.push({
+              question: q.question,
+              answer: q.expectedAnswer,
+              category: interview.role || 'General',
+              difficulty: q.score >= 7 ? 'Easy' : q.score >= 4 ? 'Medium' : 'Hard'
+            });
+          }
+        });
       });
     });
 
-    // Fallback cards if no interview data
+    // Fallback if no backend data
     if (cards.length === 0) {
       return [
         {
           question: "What is React's virtual DOM?",
-          answer:
-            "A lightweight copy of the actual DOM that allows React to optimize updates",
+          answer: "A lightweight copy of the actual DOM that allows React to optimize updates",
           category: "Frontend",
           difficulty: "Medium",
         },
         {
           question: "Explain dependency injection",
-          answer:
-            "A technique where one object supplies the dependencies of another object",
+          answer: "A technique where one object supplies the dependencies of another object",
           category: "Backend",
           difficulty: "Hard",
         },
@@ -177,7 +178,6 @@ export default function Overview() {
 
     return cards;
   };
-
   const handleNewInterview = () => {
     setCurrentInterviewId(null);
     navigate("/pre-interview");
@@ -693,12 +693,13 @@ export default function Overview() {
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full mt-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
-              >
-                Start Flashcard Session
-              </motion.button>
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  onClick={() => setIsFlashcardOpen(true)}
+  className="w-full mt-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+>
+  Start Flashcard Session
+</motion.button>
             </motion.section>
           </div>
         </div>

@@ -27,6 +27,7 @@ export const useUserInterviewStore = create(
         set((state) => ({
           mediaSettings: { ...state.mediaSettings, ...settings },
         })),
+        
     }),
     {
       name: 'user-interview-store',

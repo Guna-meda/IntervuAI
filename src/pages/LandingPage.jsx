@@ -104,6 +104,7 @@ const { user } = useAuthStore();
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm shadow-sm"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={handleLogin}
               >
                 Sign in
               </motion.button>

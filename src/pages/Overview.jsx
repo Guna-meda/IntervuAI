@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useUserStore } from "../store/userStore";
 import { useUserInterviewStore } from "../store/interviewStore";
+import { useNavigate } from "react-router-dom";
 
 // Color palette - Light blue theme
 const COLORS = {
@@ -110,9 +111,10 @@ const FEATURES = [
 export default function Overview() {
   const { user, dashboardData, fetchDashboardData, fetchUserData } =
     useUserStore();
-  const { availableRoles, startNewInterview } = useUserInterviewStore();
+  const { setCurrentInterviewId } = useUserInterviewStore();
   const [loading, setLoading] = useState(true);
   const [flashcards, setFlashcards] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadDashboardData();
@@ -176,9 +178,9 @@ export default function Overview() {
     return cards;
   };
 
-  const handleStartInterview = () => {
-    startNewInterview();
-    // Navigation logic would go here
+  const handleNewInterview = () => {
+    setCurrentInterviewId(null);
+    navigate("/pre-interview");
   };
 
   // Derived data from dashboard
@@ -271,7 +273,7 @@ export default function Overview() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleStartInterview}
+              onClick={handleNewInterview}
               className="group relative bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -309,34 +311,33 @@ export default function Overview() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Current Level */}
-              {/* Current Level */}
-<div className="text-center mb-6">
-  <motion.div 
-    initial={{ scale: 0.9, opacity: 0 }}
-    animate={{ scale: 1, opacity: 1 }}
-    transition={{ delay: 0.4, duration: 0.5 }}
-    className="inline-block relative"
-  >
-    <div className="p-4 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl shadow-lg ring-4 ring-blue-200/50">
-      <img 
-        src={LEVELS[userLevel - 1].icon} 
-        alt={LEVELS[userLevel - 1].name} 
-        className="w-16 h-16 mx-auto drop-shadow-xl"
-      />
-    </div>
+                {/* Current Level */}
+                <div className="text-center mb-6">
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.5 }}
+                    className="inline-block relative"
+                  >
+                    <div className="p-4 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl shadow-lg ring-4 ring-blue-200/50">
+                      <img
+                        src={LEVELS[userLevel - 1].icon}
+                        alt={LEVELS[userLevel - 1].name}
+                        className="w-16 h-16 mx-auto drop-shadow-xl"
+                      />
+                    </div>
 
-    {/* Subtle glow effect */}
-    <div className="absolute inset-0 blur-xl bg-blue-400/40 rounded-2xl -z-10 animate-pulse"></div>
-  </motion.div>
+                    {/* Subtle glow effect */}
+                    <div className="absolute inset-0 blur-xl bg-blue-400/40 rounded-2xl -z-10 animate-pulse"></div>
+                  </motion.div>
 
-  <h4 className="font-bold text-xl text-slate-900 mt-4">
-    {LEVELS[userLevel - 1].name}
-  </h4>
-  <p className="text-slate-600 text-sm">
-    {interviewCount} interviews completed
-  </p>
-</div>
-
+                  <h4 className="font-bold text-xl text-slate-900 mt-4">
+                    {LEVELS[userLevel - 1].name}
+                  </h4>
+                  <p className="text-slate-600 text-sm">
+                    {interviewCount} interviews completed
+                  </p>
+                </div>
 
                 {/* Progress to Next Level */}
                 <div className="space-y-6">
@@ -702,6 +703,89 @@ export default function Overview() {
           </div>
         </div>
       </div>
+      {/* Flashcard Modal */}
+<AnimatePresence>
+  {isFlashcardOpen && flashcards.length > 0 && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={() => setIsFlashcardOpen(false)}
+    >
+      <motion.div
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.8 }}
+        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={() => setIsFlashcardOpen(false)}
+          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+        >
+          X
+        </button>
+
+        {/* Card */}
+        <div
+          className="h-64 cursor-pointer perspective-1000"
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
+          <motion.div
+            animate={{ rotateY: isFlipped ? 180 : 0 }}
+            transition={{ duration: 0.6 }}
+            className="relative w-full h-full preserve-3d"
+            style={{ transformStyle: 'preserve-3d' }}
+          >
+            {/* Front: Question */}
+            <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl p-6 flex items-center justify-center text-center">
+              <p className="text-lg font-medium text-slate-800">
+                {flashcards[currentCardIndex].question}
+              </p>
+            </div>
+
+            {/* Back: Answer */}
+            <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl p-6 flex items-center justify-center text-center rotate-y-180">
+              <p className="text-lg font-medium text-slate-800">
+                {flashcards[currentCardIndex].answer}
+              </p>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center mt-6">
+          <span className="text-sm text-gray-600">
+            {currentCardIndex + 1} / {flashcards.length}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsFlashcardOpen(false)}
+              className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                if (currentCardIndex < flashcards.length - 1) {
+                  setCurrentCardIndex(currentCardIndex + 1);
+                  setIsFlipped(false);
+                } else {
+                  setIsFlashcardOpen(false);
+                }
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              {currentCardIndex < flashcards.length - 1 ? 'Next' : 'Done'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
     </div>
   );
 }

@@ -20,6 +20,7 @@ export const useUserInterviewStore = create(
         { value: 'fullstack', label: 'Full Stack Developer', icon: '🔧' },
         { value: 'app', label: 'App Developer', icon: '📱' },
       ],
+      skills: [],
       // Actions
       setCurrentInterviewId: (id) => set({ currentInterviewId: id }),
       resetInterview: () => set({ currentInterviewId: null }),
@@ -27,6 +28,7 @@ export const useUserInterviewStore = create(
         set((state) => ({
           mediaSettings: { ...state.mediaSettings, ...settings },
         })),
+        setSkills: (skills) => set({ skills }),
         
     }),
     {

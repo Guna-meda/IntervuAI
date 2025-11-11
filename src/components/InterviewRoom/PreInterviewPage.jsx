@@ -5,10 +5,10 @@ import { useUserInterviewStore } from '../../store/interviewStore';
 import { startInterview, getAllInterviews, getInterviewDetails } from '../../services/interviewService';
 import { auth } from '../../firebase/config';
 import { 
-  Rocket, Video, Mic, Settings, Play, Clock, Award, 
-  Zap, Sparkles, Target, Users, Brain, Crown, Star,
-  ChevronRight, CheckCircle2, Circle, ArrowRight, Camera,
-  MicOff, VideoOff, Wifi, Shield, Calendar, Edit, Trash2, Plus, X, ChevronDown
+  Rocket, Video, Mic,  
+  Star,
+  ChevronRight, CheckCircle2, Circle,
+  MicOff, VideoOff, Edit, Trash2, Plus, X, ChevronDown
 } from 'lucide-react';
 
 const PreInterviewPage = ({ interviewId, onStartInterview }) => {

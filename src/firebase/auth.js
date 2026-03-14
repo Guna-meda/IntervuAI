@@ -13,11 +13,16 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const isMobile = () => /Mobi|Android/i.test(navigator.userAgent);
 
+const performGoogleSignIn = async () => {
+  const signInFn = isMobile() ? signInWithRedirect : signInWithPopup;
+  console.log(`Starting Google ${isMobile() ? 'redirect' : 'popup'}...`);
+  return await signInFn(auth, provider);
+};
+
 export const loginWithGoogle = async () => {
   try {
     if (isMobile()) {
       console.log('📱 Using redirect flow...');
-      sessionStorage.setItem("redirectLogin", "true");
       await signInWithRedirect(auth, provider);
       return; // 🔥 Don't proceed further here
     }
@@ -41,8 +46,11 @@ export const loginWithGoogle = async () => {
 
     if (!response.ok) throw new Error('Failed to create/fetch user in MongoDB');
 
-    const mongoUser = await response.json();
-    return { firebaseUser: result.user, mongoUser: mongoUser.data };
+   const mongoUser = await response.json();
+
+import("../store/authStore").then(({ default: useAuthStore }) => {
+  useAuthStore.getState().setUser(result.user, mongoUser.data);
+});
   } catch (error) {
     console.error('Google sign-in or MongoDB error:', error);
     throw error;
@@ -53,9 +61,8 @@ export const loginWithGoogle = async () => {
 export const completeRedirectLogin = async () => {
   try {
     const result = await getRedirectResult(auth);
-     if (!result?.user) {
-      console.log("No redirect result available");
-      sessionStorage.removeItem("redirectLogin");
+    if (!result) {
+      console.log('No redirect result available');
       return null;
     }
 
@@ -80,11 +87,9 @@ export const completeRedirectLogin = async () => {
     }
 
     const mongoUser = await response.json();
-sessionStorage.removeItem("redirectLogin");
     return { firebaseUser: result.user, mongoUser: mongoUser.data };
   } catch (error) {
     console.error('Redirect completion or MongoDB error:', error);
-      sessionStorage.removeItem("redirectLogin");
     if (error.code === 'auth/web-storage-unsupported') {
       console.warn('Browser does not support web storage');
     }
@@ -111,7 +116,7 @@ export const getCurrentUserWithToken = async () => {
       return null;
     }
 
-    const idToken = await currentUser.getIdToken();
+    const idToken = await currentUser.getIdToken(true);
 
     const response = await fetch(`${API_BASE_URL}/users/me`, {
       headers: {

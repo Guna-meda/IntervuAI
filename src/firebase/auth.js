@@ -13,16 +13,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const isMobile = () => /Mobi|Android/i.test(navigator.userAgent);
 
-const performGoogleSignIn = async () => {
-  const signInFn = isMobile() ? signInWithRedirect : signInWithPopup;
-  console.log(`Starting Google ${isMobile() ? 'redirect' : 'popup'}...`);
-  return await signInFn(auth, provider);
-};
-
 export const loginWithGoogle = async () => {
   try {
     if (isMobile()) {
       console.log('📱 Using redirect flow...');
+      sessionStorage.setItem("redirectLogin", "true");
       await signInWithRedirect(auth, provider);
       return; // 🔥 Don't proceed further here
     }
@@ -58,8 +53,9 @@ export const loginWithGoogle = async () => {
 export const completeRedirectLogin = async () => {
   try {
     const result = await getRedirectResult(auth);
-    if (!result) {
-      console.log('No redirect result available');
+     if (!result?.user) {
+      console.log("No redirect result available");
+      sessionStorage.removeItem("redirectLogin");
       return null;
     }
 
@@ -84,9 +80,11 @@ export const completeRedirectLogin = async () => {
     }
 
     const mongoUser = await response.json();
+sessionStorage.removeItem("redirectLogin");
     return { firebaseUser: result.user, mongoUser: mongoUser.data };
   } catch (error) {
     console.error('Redirect completion or MongoDB error:', error);
+      sessionStorage.removeItem("redirectLogin");
     if (error.code === 'auth/web-storage-unsupported') {
       console.warn('Browser does not support web storage');
     }

@@ -15,7 +15,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     { href: '/overview', icon: BarChart2, label: 'Dashboard' },
     { href: '/intervuai', icon: Target, label: 'IntervuAI' },
     { href: '/analytics', icon: TrendingUp, label: 'Analytics' },
-    { href: '/settings', icon: Settings, label: 'Settings' },
   ];
 
  return (

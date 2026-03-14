@@ -8,8 +8,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function IntervuAILanding() {
 
-const { setUser, setLoading } = useAuthStore();
-
+const { user, loading, setUser, setLoading } = useAuthStore();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -21,6 +20,12 @@ const { setUser, setLoading } = useAuthStore();
   const featuresControls = useAnimation();
   const ctaControls = useAnimation();
   const navigate = useNavigate()
+
+  useEffect(() => {
+  if (!loading && user) {
+    navigate("/overview");
+  }
+}, [user, loading, navigate]);
 
   useEffect(() => {
     const finishRedirect = async () => {

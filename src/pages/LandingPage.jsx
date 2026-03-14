@@ -100,7 +100,15 @@ const { user, loading, setUser, setLoading } = useAuthStore();
     hover: { scale: 1.05, boxShadow: '0 8px 24px rgba(0, 136, 255, 0.3)' },
     tap: { scale: 0.95 },
   };
-
+  
+if (loading) {
+  return (
+    <div className="h-screen flex flex-col items-center justify-center bg-blue-50">
+      <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      <p className="mt-4 text-gray-600">Preparing your dashboard...</p>
+    </div>
+  );
+}
   return (
     <div className="min-h-screen bg-blue-50 overflow-hidden">
       {/* Floating orbs - Hidden on mobile */}

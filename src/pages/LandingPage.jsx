@@ -21,6 +21,15 @@ const { user, loading, setUser, setLoading } = useAuthStore();
   const ctaControls = useAnimation();
   const navigate = useNavigate()
 
+  const [isMobile, setIsMobile] = useState(false);
+
+useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768);
+  check();
+  window.addEventListener("resize", check);
+  return () => window.removeEventListener("resize", check);
+}, []);
+
   useEffect(() => {
   if (!loading && user) {
     navigate("/overview");
@@ -109,6 +118,50 @@ if (loading) {
     </div>
   );
 }
+
+if (isMobile) {
+  return (
+    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-blue-50 to-cyan-100 px-6 relative overflow-hidden">
+
+      {/* Background glow */}
+      <div className="absolute top-10 right-10 w-40 h-40 bg-cyan-200/30 blur-3xl rounded-full"></div>
+      <div className="absolute bottom-10 left-10 w-52 h-52 bg-blue-200/30 blur-3xl rounded-full"></div>
+
+      {/* Card */}
+      <div className="relative z-10 backdrop-blur-xl bg-white/40 border border-blue-200/50 shadow-xl rounded-2xl p-8 max-w-sm w-full text-center space-y-5">
+
+        {/* Icon */}
+        <div className="w-14 h-14 mx-auto rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
+          <span className="text-white text-xl">💻</span>
+        </div>
+
+        {/* Heading */}
+        <h1 className="text-2xl font-bold text-gray-800 leading-tight">
+          Desktop Required
+        </h1>
+
+        {/* Description */}
+        <p className="text-gray-600 text-sm leading-relaxed">
+          IntervuAI simulates real interviews with camera, mic, and live feedback.
+          <br />
+          That experience just doesn’t hit the same on mobile.
+        </p>
+
+        {/* Highlight box */}
+        <div className="bg-blue-100/40 border border-blue-200/50 rounded-lg px-4 py-3 text-xs text-gray-700">
+          Open this on a <span className="font-semibold text-gray-800">laptop or desktop</span> to start practicing.
+        </div>
+
+        {/* Tagline */}
+        <p className="text-xs text-gray-500">
+          Come back stronger. Veda’s waiting 👀
+        </p>
+
+      </div>
+    </div>
+  );
+}
+
   return (
     <div className="min-h-screen bg-blue-50 overflow-hidden">
       {/* Floating orbs - Hidden on mobile */}

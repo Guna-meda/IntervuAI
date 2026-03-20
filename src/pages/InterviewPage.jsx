@@ -101,6 +101,7 @@ export default function InterviewPage() {
     }
   }, [interviewData.interviewId, isNew]);
 
+  
   const generateNextQuestion = async () => {
     try {
       const previousQuestions = roundQuestions.map(q => ({

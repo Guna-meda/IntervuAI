@@ -196,9 +196,7 @@ export default function ProfileView() {
           {/* Cover Section */}
           <div className="relative h-48 bg-gradient-to-r from-cyan-500/20 to-blue-500/20">
             <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-            <button className="absolute top-6 right-6 p-3 bg-white/80 backdrop-blur-sm rounded-2xl text-slate-600 hover:bg-white transition-all shadow-sm hover:shadow-md">
-              <Camera className="w-5 h-5" />
-            </button>
+            
             
             {/* Profile Avatar */}
             <div className="absolute -bottom-8 left-8">
@@ -206,13 +204,7 @@ export default function ProfileView() {
                 <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-2xl shadow-cyan-500/25">
                   {getInitial()}
                 </div>
-                <motion.button 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="absolute -bottom-1 -right-1 p-2 bg-white rounded-2xl shadow-lg text-slate-600 hover:bg-cyan-50 hover:text-cyan-600 transition-all"
-                >
-                  <Camera className="w-4 h-4" />
-                </motion.button>
+                
               </div>
             </div>
           </div>
@@ -228,10 +220,7 @@ export default function ProfileView() {
                     </h1>
                     <p className="text-slate-600 font-medium text-lg mt-1">{profile?.role || 'Add your role'}</p>
                   </div>
-                  <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    <span className="text-emerald-700 text-sm font-medium">Verified</span>
-                  </div>
+                 
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
@@ -247,10 +236,7 @@ export default function ProfileView() {
                       <span>Joined {profile.joinDate}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200/40">
-                    <Star className="w-4 h-4 text-amber-500" />
-                    <span>Level {Math.floor(realStats.interviews / 5) + 1} Expert</span>
-                  </div>
+                 
                 </div>
               </div>
               
@@ -517,48 +503,7 @@ export default function ProfileView() {
               </div>
             </motion.div>
 
-            {/* Quick Actions */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-              
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                    <Rocket className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Quick Actions</h3>
-                    <p className="text-cyan-100 text-sm opacity-90">Jump back in</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {[
-                    { icon: Video, label: 'New Interview', color: 'bg-white/20' },
-                    { icon: Download, label: 'Export CV', color: 'bg-white/20' },
-                    { icon: Share, label: 'Share Profile', color: 'bg-white/20' },
-                    { icon: BarChart3, label: 'Analytics', color: 'bg-white/20' },
-                  ].map((action, idx) => (
-                    <motion.button
-                      key={action.label}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all"
-                    >
-                      <div className={`p-2 rounded-lg ${action.color}`}>
-                        <action.icon className="w-4 h-4" />
-                      </div>
-                      <span className="text-sm font-medium">{action.label}</span>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+        
 
             {/* Achievement Badge */}
             <motion.div
@@ -577,7 +522,6 @@ export default function ProfileView() {
                   <div>
                     <h4 className="font-semibold text-slate-900 mb-2">Current Level</h4>
                     <p className="text-slate-600 text-sm leading-relaxed">
-                      <span className="font-bold text-amber-600">Expert </span>
                       • {realStats.interviews} interviews completed
                     </p>
                     <div className="mt-2 w-full bg-slate-200 rounded-full h-1">

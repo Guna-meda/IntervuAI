@@ -23,7 +23,7 @@ export const useUserInterviewStore = create(
       skills: [],
       // Actions
       setCurrentInterviewId: (id) => set({ currentInterviewId: id }),
-      resetInterview: () => set({ currentInterviewId: null }),
+  clearInterviewData: () => set({ currentInterviewId: null }),
       setMediaSettings: (settings) =>
         set((state) => ({
           mediaSettings: { ...state.mediaSettings, ...settings },

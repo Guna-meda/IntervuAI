@@ -6,10 +6,17 @@ import {
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { logout } from '../../firebase/auth';
+  import { useUserStore } from '../../store/userStore';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user } = useUserStore();
+
+  const userInitial =
+  user?.displayName?.charAt(0)?.toUpperCase() ||
+  user?.profile?.fullName?.charAt(0)?.toUpperCase() ||
+  "U";
 
   const navItems = [
     { href: '/overview', icon: BarChart2, label: 'Dashboard' },
@@ -88,12 +95,12 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
         <div className="border-t border-gray-200 pt-4 mt-4">
           <Link to="/profile">
             <motion.div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 cursor-pointer transition-all"
+  className="flex items-center gap-3 px-4 py-3 min-h-[52px] rounded-xl hover:bg-gray-100 cursor-pointer transition-all"
               whileHover={{ scale: 1.02 }}
             >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
-                G
-              </div>
+             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold shrink-0 shadow-md">
+  {userInitial}
+</div>
               <AnimatePresence>
                 {isOpen && (
                   <motion.div
@@ -223,11 +230,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold">
-                  G
-                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold shrink-0 shadow-md">
+  {userInitial}
+</div>
                 <div>
-                  <div className="font-semibold text-gray-800">Guna</div>
+                  <div className="font-semibold text-gray-800">{user?.displayName || user?.profile?.fullName || "User"}</div>
                   <div className="text-xs text-gray-500">View Profile</div>
                 </div>
               </Link>

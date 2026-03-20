@@ -118,11 +118,19 @@ export const getCurrentUserWithToken = async () => {
 
     const idToken = await currentUser.getIdToken(true);
 
-    const response = await fetch(`${API_BASE_URL}/users/me`, {
+    // 🔥 CHANGED: Use createOrFetchUser (instead of /me) so Mongo user is ALWAYS created
+    // This fixes the mobile redirect case where getRedirectResult often returns null
+    const response = await fetch(`${API_BASE_URL}/users/createOrFetchUser`, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${idToken}`,
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
       },
+      body: JSON.stringify({
+        uid: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+      }),
     });
 
     if (!response.ok) {
@@ -130,10 +138,13 @@ export const getCurrentUserWithToken = async () => {
       return null;
     }
 
-    const mongoUser = await response.json();
+    const mongoResponse = await response.json();
+    // Handle both possible backend shapes (createOrFetch returns {data: ...} in other places)
+const mongoUser = mongoResponse.data || mongoResponse.user || mongoResponse;
+
     return { firebaseUser: currentUser, mongoUser };
   } catch (error) {
-    console.error('Error fetching current user:', error);
+    console.error('Error ensuring user (Firebase + Mongo):', error);
     return null;
   }
 };

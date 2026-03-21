@@ -11,6 +11,7 @@ export default function IntervuAILanding() {
 const { user, loading, setUser, setLoading } = useAuthStore();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [index, setIndex] = React.useState(0);
 
   // Framer Motion scroll animation setup
   const featuresRef = useRef(null);
@@ -55,9 +56,7 @@ useEffect(() => {
         }
       } catch (error) {
         console.error('Error finishing auth:', error);
-      } finally {
-        setLoading(false);
-      }
+      } 
     };
 
     finishRedirect();
@@ -110,15 +109,60 @@ useEffect(() => {
     tap: { scale: 0.95 },
   };
   
+const messages = [
+  "Preparing your interview dashboard...",
+  "Getting everything prepared for you...",
+  "Loading your AI interviewer...",
+];
+
+
+React.useEffect(() => {
+  const interval = setInterval(() => {
+    setIndex((prev) => (prev + 1) % messages.length);
+  }, 2000);
+  return () => clearInterval(interval);
+}, []);
+
 if (loading) {
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-blue-50">
-      <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-      <p className="mt-4 text-gray-600">Preparing your dashboard...</p>
+    <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50">
+      
+      {/* Spinner */}
+      <div className="relative mb-6">
+        <div className="w-14 h-14 border-4 border-blue-200 rounded-full"></div>
+        <div className="absolute inset-0 w-14 h-14 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+
+      {/* Animated Text */}
+      <motion.p
+        key={messages[index]}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="text-gray-700 font-medium text-sm"
+      >
+        {messages[index]}
+      </motion.p>
+
+      {/* Hint */}
+      <p className="text-xs text-gray-500 mt-2">
+        First time might take a few seconds ☕
+      </p>
+
+      {/* Dots */}
+      <div className="mt-4 flex gap-1">
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            className={`w-2 h-2 rounded-full transition-all ${
+              i === index ? "bg-blue-500 scale-125" : "bg-blue-200"
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
-
 if (isMobile) {
   return (
     <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-blue-50 to-cyan-100 px-6 relative overflow-hidden">

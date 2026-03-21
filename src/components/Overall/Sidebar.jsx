@@ -18,6 +18,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
   user?.profile?.fullName?.charAt(0)?.toUpperCase() ||
   "U";
 
+  const userName =
+  user?.displayName ||
+  user?.profile?.fullName ||
+  "User";
+
   const navItems = [
     { href: '/overview', icon: BarChart2, label: 'Dashboard' },
     { href: '/intervuai', icon: Target, label: 'IntervuAI' },
@@ -108,8 +113,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                   >
-                    <div className="font-semibold text-gray-800">Guna</div>
-                    <div className="text-xs text-gray-500">Tech Lead</div>
+                    <div className="font-semibold text-gray-800">{userName}</div>
                   </motion.div>
                 )}
               </AnimatePresence>

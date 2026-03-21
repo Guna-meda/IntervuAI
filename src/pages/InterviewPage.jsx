@@ -113,7 +113,6 @@ export default function InterviewPage() {
       const response = await generatePreparedQuestion(currentInterviewId, currentRound, previousQuestions);
       
       if (response?.data?.question) {
-        console.log('Prepared question generated:', response.data.question);
         setCurrentQuestion(response.data.question);
         setCurrentQuestionType('prepared');
       } else {
@@ -212,7 +211,6 @@ export default function InterviewPage() {
       setRoundQuestions(newRoundQuestions);
 
       if (newRoundQuestions.length >= 6) {
-        console.log('Round question limit reached, completing round', currentRound);
         await completeCurrentRound();
         return;
       }
@@ -224,15 +222,6 @@ export default function InterviewPage() {
             answer: q.answer,
             feedback: q.feedback
           }));
-          console.log('Generating follow-up question with data:', {
-            interviewId: currentInterviewId,
-            roundNumber: currentRound,
-            currentQuestion,
-            userResponse: transcript,
-            previousQuestions,
-            feedbackData,
-            followUpType: feedbackData.followUpType
-          });
           
           const followUpResponse = await generateContextualFollowUp(
             currentInterviewId,
@@ -276,7 +265,6 @@ export default function InterviewPage() {
             : response
         )
       );
-      console.log('Recovering from error by generating next question');
       await generateNextQuestion();
     } finally {
       setLoading(false);

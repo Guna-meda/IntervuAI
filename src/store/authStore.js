@@ -13,27 +13,30 @@ const useAuthStore = create((set) => ({
   setLoading: (loading) => set({ loading }),
 }));
 
+// authStore.js - Add debugging
 onAuthStateChanged(auth, async (firebaseUser) => {
-  console.log('Auth state changed:', firebaseUser ? 'User logged in' : 'User logged out');
-
   const { setUser, setLoading } = useAuthStore.getState();
 
   if (firebaseUser) {
     try {
-      setLoading(true); // 🔥 IMPORTANT
+      setLoading(true);
 
       const result = await getCurrentUserWithToken();
 
-      if (result) {
-        setUser(result.firebaseUser, result.mongoUser);
-      } else {
-        setUser(null, null);
+      setUser(result?.firebaseUser || firebaseUser, result?.mongoUser || null);
+
+      // 🔥 ONLY reload once after login
+      const justLoggedIn = sessionStorage.getItem("justLoggedIn");
+      if (justLoggedIn) {
+        sessionStorage.removeItem("justLoggedIn");
+        window.location.href = "/overview";
+        return;
       }
+
     } catch (error) {
-      console.error('Error in auth state change:', error);
-      setUser(null, null);
+      setUser(firebaseUser, null);
     } finally {
-      setLoading(false); // 🔥 only here
+      setLoading(false);
     }
   } else {
     setUser(null, null);

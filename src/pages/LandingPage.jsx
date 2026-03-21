@@ -37,36 +37,9 @@ useEffect(() => {
   }
 }, [user, loading, navigate]);
 
-  useEffect(() => {
-    const finishRedirect = async () => {
-      try {
-        // Step 1: Complete any pending redirect sign-in (mobile)
-        const redirectResult = await completeRedirectLogin();
-        if (redirectResult) {
-          setUser(redirectResult.firebaseUser, redirectResult.mongoUser);
-          navigate('/overview'); // ← Immediate redirect to avoid flashing landing page
-          return; // No need to continue
-        }
-
-        // Step 2: Fallback for existing sessions or popup (if needed)
-        const result = await getCurrentUserWithToken();
-        if (result) {
-          setUser(result.firebaseUser, result.mongoUser);
-          navigate('/overview');
-        }
-      } catch (error) {
-        console.error('Error finishing auth:', error);
-      } 
-    };
-
-    finishRedirect();
-  }, [setUser, setLoading, navigate]);
-
   const handleLogin = async () => {
     try {
       await loginWithGoogle();
-      // After popup (desktop), onAuthStateChanged handles setUser
-      // After redirect (mobile), finishRedirect will handle on next load
     } catch (error) {
       console.error('Login failed:', error);
     }

@@ -19,7 +19,6 @@ onAuthStateChanged(auth, async (firebaseUser) => {
 
   if (firebaseUser) {
     try {
-      setLoading(true);
 
       const result = await getCurrentUserWithToken();
 

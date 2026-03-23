@@ -112,10 +112,19 @@ export default function InterviewPage() {
       }));
       const response = await generatePreparedQuestion(currentInterviewId, currentRound, previousQuestions);
       
-      if (response?.data?.question) {
-        setCurrentQuestion(response.data.question);
-        setCurrentQuestionType('prepared');
-      } else {
+ if (response?.data?.question) {
+  setCurrentQuestion(response.data.question);
+  setCurrentQuestionType('prepared');
+
+  // 🔊 PLAY AUDIO HERE
+  if (response.data.audio) {
+    const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+    
+    audio.play().catch(err => {
+      console.log("Autoplay blocked:", err);
+    });
+  }
+} else {
         console.warn('No prepared question received, using fallback');
         const fallbackQuestions = [
           "Can you explain how the Virtual DOM works in React and its performance benefits?",
@@ -236,6 +245,13 @@ export default function InterviewPage() {
           if (followUpResponse?.data?.question) {
             console.log('Follow-up question generated:', followUpResponse.data.question);
             setCurrentQuestion(followUpResponse.data.question);
+            if (followUpResponse.data.audio) {
+    const audio = new Audio(`data:audio/mp3;base64,${followUpResponse.data.audio}`);
+    
+    audio.play().catch(err => {
+      console.log("Autoplay blocked:", err);
+    });
+  }
             setCurrentQuestionType('followup');
             setIsPlaying(true);
             setTimeout(() => setIsPlaying(false), 2000);

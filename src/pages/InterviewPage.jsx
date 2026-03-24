@@ -31,6 +31,7 @@ export default function InterviewPage() {
   });
   const [fullInterview, setFullInterview] = useState(null);
   const audioRef = useRef(null);
+  const [showNoSpeechPopup, setShowNoSpeechPopup] = useState(false);
 
   const { 
     currentInterviewId, 
@@ -133,7 +134,8 @@ export default function InterviewPage() {
   if (!isMuted) {
     newAudio.play().catch(err => console.log("Autoplay blocked", err));
   }
-}} else {
+}
+} else {
         console.warn('No prepared question received, using fallback');
         const fallbackQuestions = [
           "Can you explain how the Virtual DOM works in React and its performance benefits?",
@@ -419,6 +421,13 @@ export default function InterviewPage() {
     navigate('/pre-interview');
   };
 
+  const stopQuestionAudio = () => {
+  if (audioRef.current) {
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+  }
+};
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/50">
       <main className="max-w-7xl mx-auto px-4 py-8">
@@ -478,7 +487,7 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                   <MessageSquare className="w-3 h-3" />
                   CURRENT QUESTION
                 </p>
-                <div className="max-h-24 overflow-y-auto">
+                <div className="max-h-none">
                   <p className="text-sm font-medium text-slate-800 leading-relaxed">
                     {currentQuestion}
                   </p>
@@ -587,11 +596,13 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
               </div>
 
               <div className="flex-1 p-4">
-                <LiveInterview 
-                  onUserResponse={handleUserResponse}
-                  onStatusUpdate={(status) => console.log('Interview status:', status)}
-                  disabled={interviewStage !== 'active' || loading || showRoundComplete}
-                />
+               <LiveInterview 
+  currentQuestion={currentQuestion}
+  onUserResponse={handleUserResponse}
+  onStatusUpdate={(status) => console.log('Interview status:', status)}
+  onStopAudio={stopQuestionAudio}   // ✅ ADD THIS
+  disabled={interviewStage !== 'active' || loading || showRoundComplete}
+/>
               </div>
 
               <div className="p-4 border-t border-slate-200/40">

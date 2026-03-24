@@ -4,14 +4,16 @@ import LiveSpeechService from '../../services/LiveSpeechService'; // ✅ replace
 
 export default function LiveInterview({ 
   currentQuestion, 
-  onResponse, // preferred prop name used by pages
-  onUserResponse, // backward-compatible alias
-  onStatusUpdate 
+  onResponse,
+  onUserResponse,
+  onStatusUpdate,
+  onStopAudio
 }) {
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
   const [videoStream, setVideoStream] = useState(null);
   const videoRef = useRef(null);
+  const [showNoSpeechPopup, setShowNoSpeechPopup] = useState(false);
 
   // Initialize WebRTC stream when component mounts
   useEffect(() => {
@@ -22,18 +24,9 @@ export default function LiveInterview({
       WebRTCService.stopStream();
       LiveSpeechService.stopRecording(); // ✅ changed name
     };
-  }, []);
+  }, [])
+  
 
-  // Start listening automatically when a new question comes
-  useEffect(() => {
-    if (currentQuestion) {
-      setTimeout(() => {
-        startListening();
-      }, 3000);
-    }
-  }, [currentQuestion]);
-
-  // Initialize WebRTC video/audio stream
   const initializeWebRTC = async () => {
     try {
       const stream = await WebRTCService.getLiveStream();
@@ -44,22 +37,25 @@ export default function LiveInterview({
     }
   };
 
-  const startListening = async () => {
-    setIsListening(true);
-    setUserTranscript("🎤 Listening... Speak your answer");
-    if (onStatusUpdate) onStatusUpdate('listening');
+ const startListening = async () => {
+  if (onStopAudio) onStopAudio(); // ✅ STOP QUESTION AUDIO
 
-    try {
-      await LiveSpeechService.startRecording(); // ✅ replaced
-    } catch (error) {
-      console.error('Failed to start recording:', error);
-      setUserTranscript('❌ Microphone access required');
-      setIsListening(false);
-    }
-  };
+  setIsListening(true);
+  setUserTranscript("🎤 Listening... Speak your answer");
+  if (onStatusUpdate) onStatusUpdate('listening');
+
+  try {
+    await LiveSpeechService.startRecording();
+  } catch (error) {
+    console.error('Failed to start recording:', error);
+    setUserTranscript('❌ Microphone access required');
+    setIsListening(false);
+  }
+};
 
 const stopListening = async () => {
   try {
+      if (onStopAudio) onStopAudio();
     console.log('Stopping recording and processing...');
     
     const transcript = await LiveSpeechService.stopRecording();
@@ -73,11 +69,10 @@ const stopListening = async () => {
       const responder = onResponse || onUserResponse;
       if (responder) responder(transcript);
       if (onStatusUpdate) onStatusUpdate('processing');
-    } else if (transcript === '') {
-      // Empty but valid (no speech detected)
-      setUserTranscript("No speech detected. Please speak clearly and try again.");
-      if (onStatusUpdate) onStatusUpdate('no-speech');
-    } else {
+    }else if (transcript === '') {
+  setShowNoSpeechPopup(true); // ✅ trigger popup
+  if (onStatusUpdate) onStatusUpdate('no-speech');
+} else {
       // Undefined or error
       setUserTranscript("Error processing audio. Please try again.");
       if (onStatusUpdate) onStatusUpdate('error');
@@ -93,10 +88,9 @@ const stopListening = async () => {
 
   return (
     <div className="live-interview">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
         {/* Video Section */}
         <div className="video-section">
-          <h3 className="text-lg font-semibold mb-4">📹 Live Video</h3>
           <div className="video-container bg-black rounded-lg overflow-hidden">
             <video
               ref={videoRef}
@@ -110,35 +104,10 @@ const stopListening = async () => {
             {isListening ? '● LIVE - Listening to your audio' : 'Video preview'}
           </div>
         </div>
-
-        {/* Transcription Section */}
-        <div className="transcription-section">
-          <h3 className="text-lg font-semibold mb-4">💬 Live Transcription</h3>
-          
-          
-
-          {/* Status Indicator */}
-          <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
-            <div className="flex items-center">
-              <div className={`w-3 h-3 rounded-full mr-2 ${
-                isListening ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
-              }`}></div>
-              <span className="text-sm font-medium">
-                {isListening ? 'Live Transcription Active' : 'Ready for Question'}
-              </span>
-            </div>
-            <p className="text-xs text-gray-600 mt-1">
-              {isListening 
-                ? "Speak your answer. We'll send it when you click Stop." 
-                : 'WebRTC stream active - video and audio ready'}
-            </p>
-          </div>
-
-          {/* Controls */}
-          <div className="mt-4 flex space-x-4">
+  <div className="mt-4 flex space-x-4">
             <button
               onClick={startListening}
-              disabled={isListening || !currentQuestion}
+              disabled={isListening || !currentQuestion }
               className="px-4 py-2 bg-green-500 text-white rounded disabled:bg-gray-400"
             >
               Start Speaking
@@ -151,10 +120,28 @@ const stopListening = async () => {
               Stop
             </button>
           </div>
-        </div>
+       
       </div>
 
-      
+      {showNoSpeechPopup && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 shadow-lg max-w-sm w-full text-center">
+      <h2 className="text-lg font-semibold text-gray-800 mb-2">
+        No Answer Detected 
+      </h2>
+      <p className="text-sm text-gray-600 mb-4">
+        You need to answer the question before proceeding.
+      </p>
+      <button
+        onClick={() => setShowNoSpeechPopup(false)}
+        className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+      >
+        Try Again
+      </button>
     </div>
+  </div>
+)}
+    </div>
+    
   );
 }

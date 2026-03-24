@@ -115,17 +115,7 @@ const stopListening = async () => {
         <div className="transcription-section">
           <h3 className="text-lg font-semibold mb-4">💬 Live Transcription</h3>
           
-          <div className={`p-4 rounded-lg min-h-48 ${
-            isListening ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
-          }`}>
-            {userTranscript ? (
-              <p className="text-gray-800 whitespace-pre-wrap">{userTranscript}</p>
-            ) : (
-              <p className="text-gray-400 italic">
-                {currentQuestion ? 'Waiting for you to speak...' : 'Waiting for question...'}
-              </p>
-            )}
-          </div>
+          
 
           {/* Status Indicator */}
           <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
@@ -164,13 +154,7 @@ const stopListening = async () => {
         </div>
       </div>
 
-      {/* Current Question Display */}
-      {currentQuestion && (
-        <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-          <h3 className="font-semibold text-yellow-800 mb-2">🤔 Current Question:</h3>
-          <p className="text-lg text-gray-800">{currentQuestion}</p>
-        </div>
-      )}
+      
     </div>
   );
 }

@@ -889,7 +889,7 @@ export default function IntervuAI() {
                         <stat.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${stat.text}`} />
                       </div>
                       <p className={`text-lg sm:text-2xl font-bold ${stat.text.replace('700', '900')}`}>
-                        {stat.value}{stat.unit}
+                        {stat.value} {stat.unit}
                       </p>
                     </div>
                     <div className="absolute bottom-0 right-0 w-12 sm:w-16 h-12 sm:h-16 bg-white/20 rounded-tl-full" />
@@ -898,43 +898,7 @@ export default function IntervuAI() {
               </div>
             </motion.section>
 
-            {/* Recent Feedback Section */}
-            <motion.section
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              ref={feedbackRef}
-              className="bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-cyan-200/40 shadow-xs"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg sm:rounded-xl">
-                  <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
-                </div>
-                <h2 className="font-semibold text-slate-900 text-base sm:text-lg md:text-xl">
-                  Recent Feedback
-                </h2>
-              </div>
-              
-              <div className="space-y-2 sm:space-y-3">
-                {allInterviews.slice(0, 3).map((interview, index) => (
-                  <motion.div
-                    key={index}
-                    variants={itemVariants}
-                    className="p-2 sm:p-3 bg-gradient-to-r from-cyan-50/50 to-blue-50/50 rounded-lg sm:rounded-2xl border border-cyan-200/40 group hover:shadow-sm transition-all"
-                  >
-                    <div className="flex items-start gap-1.5 sm:gap-2 flex-wrap">
-                      <div className="w-1.5 sm:w-2 h-8 sm:h-12 bg-gradient-to-b from-cyan-400 to-blue-400 rounded-full flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 mb-0.5 sm:mb-1 text-sm sm:text-base truncate">{interview.role}</p>
-                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 sm:line-clamp-3">
-                          {interview.overallFeedback || 'No feedback yet. Complete an interview round to get AI-powered feedback.'}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.section>
+           
           </div>
 
           {/* Sidebar */}

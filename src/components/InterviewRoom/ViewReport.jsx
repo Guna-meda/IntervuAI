@@ -228,18 +228,7 @@ export default function ViewReport() {
         >
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="flex items-center gap-6">
-              <div className="relative">
-                <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-cyan-500/25">
-                  <Award className="w-10 h-10 text-white" />
-                </div>
-                <motion.div
-                  className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <Crown className="w-4 h-4 text-white" />
-                </motion.div>
-              </div>
+             
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
                   Performance Report
@@ -269,43 +258,7 @@ export default function ViewReport() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl p-6 text-white shadow-lg text-center min-w-[140px]">
-                <p className="text-sm font-medium mb-2">Overall Score</p>
-                <p className="text-3xl font-bold">{getOverallScore()}/10</p>
-                <div className="mt-2 w-full bg-white/20 rounded-full h-2">
-                  <motion.div
-                    className="h-full bg-white rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(getOverallScore() / 10) * 100}%` }}
-                    transition={{ duration: 1 }}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl p-6 text-white shadow-lg text-center min-w-[140px]">
-                <p className="text-sm font-medium mb-2">Rounds Completed</p>
-                <p className="text-3xl font-bold">
-                  {
-                    interview.rounds.filter((r) => r.status === "completed")
-                      .length
-                  }
-                  /{interview.totalRounds}
-                </p>
-                <div className="mt-2 flex items-center justify-center gap-1">
-                  {interview.rounds.map((round, idx) => (
-                    <div
-                      key={idx}
-                      className={`w-2 h-2 rounded-full ${
-                        round.status === "completed"
-                          ? "bg-white"
-                          : "bg-white/30"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
+           
           </div>
         </motion.header>
 
@@ -467,221 +420,123 @@ export default function ViewReport() {
             </motion.div>
           )}
 
-          {activeTab === "details" && (
-            <motion.div
-              key="details"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
-            >
-              {interview.rounds.map((round) => (
-                <motion.div
-                  key={round.roundNumber}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4 }}
-                  className="bg-white/70 backdrop-blur-sm rounded-3xl border border-cyan-200/40 shadow-xs overflow-hidden"
-                >
-                  <div
-                    onClick={() => toggleRound(round.roundNumber)}
-                    className="flex items-center justify-between p-8 cursor-pointer hover:bg-white/50 transition-all"
-                  >
-                    <div className="flex items-center gap-6">
-                      <div className="relative">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                          {round.roundNumber}
-                        </div>
-                        {round.status === "completed" && (
-                          <motion.div
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center"
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                          >
-                            <CheckCircle className="w-3 h-3 text-white" />
-                          </motion.div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-slate-900">
-                          Round {round.roundNumber}
-                        </h3>
-                        <div className="flex items-center gap-6 text-slate-600 mt-2">
-                          <div className="flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4" />
-                            <span>
-                              {round.questions?.length || 0} questions
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Star className="w-4 h-4" />
-                            <span className="font-semibold">
-                              {getRoundScore(round)}/10
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+{activeTab === "details" && (
+  <div className="space-y-6">
+    
+  {interview.rounds.map((round) => (
+  <motion.div
+    key={round.roundNumber}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
+  >
+    
+    {/* ROUND HEADER */}
+    <div
+      onClick={() => toggleRound(round.roundNumber)}
+      className="flex items-center justify-between p-6 cursor-pointer hover:bg-white/40 transition"
+    >
+      <div className="flex items-center gap-4">
+        
+        {/* ROUND NUMBER BADGE */}
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex items-center justify-center font-bold shadow-lg">
+          {round.roundNumber}
+        </div>
+
+        {/* ROUND INFO */}
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">
+            Round {round.roundNumber}
+          </h3>
+
+          <p className="text-sm text-slate-500">
+            {round.questions?.length || 0} questions • {getRoundScore(round)}/10
+          </p>
+        </div>
+      </div>
+
+      {/* ARROW */}
+      <motion.div
+        animate={{
+          rotate: expandedRounds.includes(round.roundNumber) ? 180 : 0,
+        }}
+        className="p-2 bg-white rounded-lg "
+      >
+        <ChevronDown className="w-4 h-4 text-slate-600" />
+      </motion.div>
+    </div>
+
+    {/* EXPAND CONTENT */}
+    <AnimatePresence>
+      {expandedRounds.includes(round.roundNumber) && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="border-t"
+        >
+          <div className="p-6 space-y-6">
+
+            {round.questions.map((q, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className={`p-5 rounded-2xl border bg-white/80 shadow-sm hover:shadow-md transition ${getScoreBgColor(q.score)}`}
+              >
+                {/* HEADER */}
+                <div className="flex justify-between mb-3">
+                  <div className="flex gap-3">
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getScoreColor(q.score)} text-white flex items-center justify-center font-bold`}>
+                      {q.score || 0}
                     </div>
-                    <motion.div
-                      animate={{
-                        rotate: expandedRounds.includes(round.roundNumber)
-                          ? 180
-                          : 0,
-                      }}
-                      transition={{ duration: 0.3 }}
-                      className="p-3 bg-slate-100 rounded-xl"
-                    >
-                      <ChevronDown className="w-5 h-5 text-slate-600" />
-                    </motion.div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900">
+                        Question {idx + 1}
+                      </h4>
+                      <p className="text-sm text-slate-600">
+                        {q.question}
+                      </p>
+                    </div>
                   </div>
 
-                  <AnimatePresence>
-                    {expandedRounds.includes(round.roundNumber) && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.4 }}
-                        className="border-t border-cyan-200/40"
-                      >
-                        <div className="p-8 space-y-6">
-                          {/* Round Score Chart */}
-                          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-2xl p-6 border border-cyan-200/40">
-                            <h4 className="text-lg font-semibold text-slate-900 mb-4">
-                              Question Scores
-                            </h4>
-                            <div className="h-64">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                  data={round.questions.map((q, i) => ({
-                                    name: `Q${i + 1}`,
-                                    score: q.score || 0,
-                                  }))}
-                                >
-                                  <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    stroke="#e2e8f0"
-                                  />
-                                  <XAxis dataKey="name" />
-                                  <YAxis domain={[0, 10]} />
-                                  <Tooltip />
-                                  <Bar
-                                    dataKey="score"
-                                    radius={[6, 6, 0, 0]}
-                                    className="fill-cyan-500"
-                                  />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </div>
+                  <div className="text-sm font-semibold text-slate-700">
+                    ⭐ {q.score || 0}/10
+                  </div>
+                </div>
 
-                          {/* Questions */}
-                          {round.questions.map((q, idx) => (
-                            <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.1 }}
-                              className={`p-6 rounded-2xl border-2 ${getScoreBgColor(
-                                q.score
-                              )}`}
-                            >
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-start gap-4">
-                                  <div
-                                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getScoreColor(
-                                      q.score
-                                    )} flex items-center justify-center text-white font-bold text-sm`}
-                                  >
-                                    {q.score || 0}
-                                  </div>
-                                  <div>
-                                    <h4 className="text-lg font-semibold text-slate-900 mb-2">
-                                      Question {idx + 1}
-                                    </h4>
-                                    <p className="text-slate-700 font-medium">
-                                      {q.question}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-slate-600">
-                                  <Star className="w-4 h-4" />
-                                  <span className="font-bold">
-                                    {q.score || 0}/10
-                                  </span>
-                                </div>
-                              </div>
+                {/* BODY */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-semibold mb-1 text-emerald-700">
+                      Expected Answer
+                    </p>
+                    <div className="bg-emerald-50 p-3 rounded-lg text-sm">
+                      {q.expectedAnswer}
+                    </div>
+                  </div>
 
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                                      <BookOpen className="w-4 h-4" />
-                                      Your Answer Summary
-                                    </p>
-                                    <p className="text-slate-700 bg-white/50 rounded-lg p-4 border border-slate-200 leading-relaxed">
-                                      {/* Now using the proper answerSummary from backend */}
-                                      {q.answerSummary ||
-                                        "No summary available"}
-                                    </p>
-                                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1 text-cyan-700">
+                      Feedback
+                    </p>
+                    <div className="bg-cyan-50 p-3 rounded-lg text-sm">
+                      {q.feedback}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
 
-                                  {/* Keywords Section */}
-                                  {q.keywords && q.keywords.length > 0 && (
-                                    <div>
-                                      <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                                        <Key className="w-4 h-4" />
-                                        Quick Revision Keywords
-                                      </p>
-                                      <div className="flex flex-wrap gap-2">
-                                        {q.keywords.map((keyword, keyIdx) => (
-                                          <span
-                                            key={keyIdx}
-                                            className="px-3 py-1 bg-cyan-100 text-cyan-800 rounded-full text-xs font-medium capitalize"
-                                          >
-                                            {keyword}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="space-y-4">
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                                      <Lightbulb className="w-4 h-4" />
-                                      Expected Answer
-                                    </p>
-                                    <p className="text-slate-700 bg-emerald-50/50 rounded-lg p-4 border border-emerald-200 leading-relaxed">
-                                      {/* Now using the simplified expectedAnswer from backend */}
-                                      {q.expectedAnswer ||
-                                        "No expected answer provided."}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                                      <MessageSquare className="w-4 h-4" />
-                                      Detailed Feedback
-                                    </p>
-                                    <p className="text-slate-700 bg-cyan-50/50 rounded-lg p-4 border border-cyan-200 leading-relaxed">
-                                      {q.feedback ||
-                                        "No detailed feedback provided"}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </motion.div>
+))}
+  </div>
+)}
         </AnimatePresence>
 
         {/* Action Buttons */}

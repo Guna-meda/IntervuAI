@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Play, RotateCcw, 
@@ -30,6 +30,7 @@ export default function InterviewPage() {
     interviewId: null
   });
   const [fullInterview, setFullInterview] = useState(null);
+  const audioRef = useRef(null);
 
   const { 
     currentInterviewId, 
@@ -40,6 +41,8 @@ export default function InterviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isNew = location.state?.isNew || false;
+
+  const QUESTIONS_PER_ROUND = 5;
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('closeSidebar'));
@@ -80,7 +83,7 @@ export default function InterviewPage() {
             setInterviewStage(data.status === 'active' || isNew ? 'ready' : data.status);
             if (currentRoundData.status === 'in_progress' && !isNew) {
               setInterviewStage('active');
-              if ((currentRoundData.questions || []).length < 6) {
+              if ((currentRoundData.questions || []).length < QUESTIONS_PER_ROUND) {
                 await generateNextQuestion();
               } else {
                 setShowRoundComplete(true);
@@ -118,13 +121,19 @@ export default function InterviewPage() {
 
   // 🔊 PLAY AUDIO HERE
   if (response.data.audio) {
-    const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-    
-    audio.play().catch(err => {
-      console.log("Autoplay blocked:", err);
-    });
+  // STOP previous audio
+  if (audioRef.current) {
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
   }
-} else {
+
+  const newAudio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+  audioRef.current = newAudio;
+
+  if (!isMuted) {
+    newAudio.play().catch(err => console.log("Autoplay blocked", err));
+  }
+}} else {
         console.warn('No prepared question received, using fallback');
         const fallbackQuestions = [
           "Can you explain how the Virtual DOM works in React and its performance benefits?",
@@ -219,10 +228,10 @@ export default function InterviewPage() {
       const newRoundQuestions = [...roundQuestions, questionData];
       setRoundQuestions(newRoundQuestions);
 
-      if (newRoundQuestions.length >= 6) {
+      if (newRoundQuestions.length >= QUESTIONS_PER_ROUND) {
         await completeCurrentRound();
         return;
-      }
+}
 
       if (feedbackData.needsFollowUp && !isNonInformative) {
         try {
@@ -246,11 +255,18 @@ export default function InterviewPage() {
             console.log('Follow-up question generated:', followUpResponse.data.question);
             setCurrentQuestion(followUpResponse.data.question);
             if (followUpResponse.data.audio) {
-    const audio = new Audio(`data:audio/mp3;base64,${followUpResponse.data.audio}`);
-    
-    audio.play().catch(err => {
-      console.log("Autoplay blocked:", err);
-    });
+      if (audioRef.current) {
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+  }
+
+  const newAudio = new Audio(`data:audio/mp3;base64,${followUpResponse.data.audio}`);
+  audioRef.current = newAudio;
+
+  if (!isMuted) {
+    newAudio.play().catch(err => console.log("Autoplay blocked", err));
+  }
+
   }
             setCurrentQuestionType('followup');
             setIsPlaying(true);
@@ -334,7 +350,7 @@ export default function InterviewPage() {
           setFullInterview({ ...fullInterview, rounds: updatedRounds });
         }
         setInterviewStage('active');
-        if (roundQuestions.length < 6) {
+        if (roundQuestions.length < QUESTIONS_PER_ROUND) {
           await generateNextQuestion();
         } else {
           setShowRoundComplete(true);
@@ -423,20 +439,20 @@ export default function InterviewPage() {
                   <span className="text-sm font-semibold text-slate-900">Progress</span>
                 </div>
                 <div className="text-xs text-slate-500">
-                  Round {currentRound}/{interviewData.totalRounds}
+Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.totalRounds}
                 </div>
               </div>
 
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-slate-600">Questions Answered</span>
-                  <span className="text-slate-900">{responses.length}/6</span>
+                  <span className="text-slate-900">{responses.length}/{QUESTIONS_PER_ROUND}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
                     initial={{ width: 0 }}
-                    animate={{ width: `${(responses.length / 6) * 100}%` }}
+                    animate={{ width: `${(responses.length / QUESTIONS_PER_ROUND) * 100}%` }}
                     transition={{ duration: 0.5 }}
                   />
                 </div>
@@ -552,7 +568,7 @@ export default function InterviewPage() {
                   <div>
                     <h3 className="text-base font-bold text-slate-900">Live Session</h3>
                     <p className="text-xs text-slate-600">
-                      Round {currentRound} • Question {roundQuestions.length + 1}/6
+                     Round {showRoundComplete ? currentRound - 1 : currentRound} • Question {roundQuestions.length + 1}/{QUESTIONS_PER_ROUND}
                     </p>
                   </div>
                 </div>
@@ -572,7 +588,6 @@ export default function InterviewPage() {
 
               <div className="flex-1 p-4">
                 <LiveInterview 
-                  currentQuestion={currentQuestion}
                   onUserResponse={handleUserResponse}
                   onStatusUpdate={(status) => console.log('Interview status:', status)}
                   disabled={interviewStage !== 'active' || loading || showRoundComplete}

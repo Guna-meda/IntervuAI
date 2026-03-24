@@ -1,21 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, Play, RotateCcw, 
-  Volume2, VolumeX, CheckCircle, MessageSquare,
-  Clock, Award, ChevronRight, ChevronDown, Video, 
-  Settings, Brain, Target, BarChart3, User,
-  Mic, MicOff, Star, Zap, Crown, Trash2
-} from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import LiveInterview from '../components/InterviewRoom/LiveInterview';
-import { useUserInterviewStore } from '../store/interviewStore';
-import { generateAnswerFeedback, completeRound, startRound, generatePreparedQuestion, generateContextualFollowUp, getInterviewDetails, cancelInterview, deleteInterview } from '../services/interviewService';
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Sparkles,
+  Play,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  CheckCircle,
+  MessageSquare,
+  Clock,
+  Award,
+  ChevronRight,
+  ChevronDown,
+  Video,
+  Settings,
+  Brain,
+  Target,
+  BarChart3,
+  User,
+  Mic,
+  MicOff,
+  Star,
+  Zap,
+  Crown,
+  Trash2,
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import LiveInterview from "../components/InterviewRoom/LiveInterview";
+import { useUserInterviewStore } from "../store/interviewStore";
+import {
+  generateAnswerFeedback,
+  completeRound,
+  startRound,
+  generatePreparedQuestion,
+  generateContextualFollowUp,
+  getInterviewDetails,
+  cancelInterview,
+  deleteInterview,
+} from "../services/interviewService";
 
 export default function InterviewPage() {
-  const [currentQuestion, setCurrentQuestion] = useState('');
+  const [currentQuestion, setCurrentQuestion] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
-  const [interviewStage, setInterviewStage] = useState('ready');
+  const [interviewStage, setInterviewStage] = useState("ready");
   const [responses, setResponses] = useState([]);
   const [currentRound, setCurrentRound] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
@@ -23,21 +50,18 @@ export default function InterviewPage() {
   const [loading, setLoading] = useState(false);
   const [roundQuestions, setRoundQuestions] = useState([]);
   const [showRoundComplete, setShowRoundComplete] = useState(false);
-  const [currentQuestionType, setCurrentQuestionType] = useState('prepared');
+  const [currentQuestionType, setCurrentQuestionType] = useState("prepared");
   const [interviewData, setInterviewData] = useState({
-    role: 'Frontend Developer',
+    role: "Frontend Developer",
     totalRounds: 3,
-    interviewId: null
+    interviewId: null,
   });
   const [fullInterview, setFullInterview] = useState(null);
   const audioRef = useRef(null);
   const [showNoSpeechPopup, setShowNoSpeechPopup] = useState(false);
 
-  const { 
-    currentInterviewId, 
-    availableRoles,
-    setCurrentInterviewId 
-  } = useUserInterviewStore();
+  const { currentInterviewId, availableRoles, setCurrentInterviewId } =
+    useUserInterviewStore();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,14 +70,17 @@ export default function InterviewPage() {
   const QUESTIONS_PER_ROUND = 5;
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('closeSidebar'));
-    
+    window.dispatchEvent(new CustomEvent("closeSidebar"));
+
     if (!currentInterviewId) {
       const newInterviewId = `interview_${Date.now()}`;
       setCurrentInterviewId(newInterviewId);
-      setInterviewData(prev => ({ ...prev, interviewId: newInterviewId }));
+      setInterviewData((prev) => ({ ...prev, interviewId: newInterviewId }));
     } else {
-      setInterviewData(prev => ({ ...prev, interviewId: currentInterviewId }));
+      setInterviewData((prev) => ({
+        ...prev,
+        interviewId: currentInterviewId,
+      }));
     }
   }, [currentInterviewId, setCurrentInterviewId]);
 
@@ -67,101 +94,139 @@ export default function InterviewPage() {
             setFullInterview(data);
             setCurrentRound(data.currentRound);
             const currentRoundIndex = data.currentRound - 1;
-            const currentRoundData = data.rounds[currentRoundIndex] || { questions: [], status: 'not_started' };
+            const currentRoundData = data.rounds[currentRoundIndex] || {
+              questions: [],
+              status: "not_started",
+            };
             setRoundQuestions(currentRoundData.questions || []);
-            setResponses((currentRoundData.questions || []).map((q, index) => ({
-              id: Date.now() + index,
-              question: q.question,
-              answer: q.answer,
-              timestamp: q.answeredAt || new Date().toISOString(),
-              score: q.score || 0,
-              feedback: q.feedback || '',
-              expectedAnswer: q.expectedAnswer || '',
-              summary: q.feedback ? q.feedback.substring(0, 100) + '...' : '',
-              status: 'completed',
-              questionType: q.questionType || 'prepared'
-            })));
-            setInterviewStage(data.status === 'active' || isNew ? 'ready' : data.status);
-            if (currentRoundData.status === 'in_progress' && !isNew) {
-              setInterviewStage('active');
-              if ((currentRoundData.questions || []).length < QUESTIONS_PER_ROUND) {
-                await generateNextQuestion();
-              } else {
-                setShowRoundComplete(true);
-              }
+            setResponses(
+              (currentRoundData.questions || []).map((q, index) => ({
+                id: Date.now() + index,
+                question: q.question,
+                answer: q.answer,
+                timestamp: q.answeredAt || new Date().toISOString(),
+                score: q.score || 0,
+                feedback: q.feedback || "",
+                expectedAnswer: q.expectedAnswer || "",
+                summary: q.feedback ? q.feedback.substring(0, 100) + "..." : "",
+                status: "completed",
+                questionType: q.questionType || "prepared",
+              })),
+            );
+            setInterviewStage(
+              data.status === "active" || isNew ? "ready" : data.status,
+            );
+            if (currentRoundData.status === "in_progress" && !isNew) {
+              // ✅ DO NOT AUTO START
+              setInterviewStage("ready");
+
+              // optional: keep question empty until user clicks
+              setCurrentQuestion("");
             } else if (isNew) {
-              setInterviewStage('ready');
+              setInterviewStage("ready");
               setResponses([]);
               setRoundQuestions([]);
-              setCurrentQuestion('');
+              setCurrentQuestion("");
               setShowRoundComplete(false);
             }
           }
         } catch (error) {
-          console.error('Error loading interview:', error);
+          console.error("Error loading interview:", error);
         }
       };
       loadInterview();
     }
   }, [interviewData.interviewId, isNew]);
 
-  
+  // 🔴 STOP AUDIO ON COMPONENT UNMOUNT
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  // 🔴 STOP AUDIO ON ROUTE CHANGE (extra safety)
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [location.pathname]);
+
   const generateNextQuestion = async () => {
     try {
-      const previousQuestions = roundQuestions.map(q => ({
+      const previousQuestions = roundQuestions.map((q) => ({
         question: q.question,
         answer: q.answer,
         feedback: q.feedback,
-        score: q.score
+        score: q.score,
       }));
-      const response = await generatePreparedQuestion(currentInterviewId, currentRound, previousQuestions);
-      
- if (response?.data?.question) {
-  setCurrentQuestion(response.data.question);
-  setCurrentQuestionType('prepared');
+      const response = await generatePreparedQuestion(
+        currentInterviewId,
+        currentRound,
+        previousQuestions,
+      );
 
-  // 🔊 PLAY AUDIO HERE
-  if (response.data.audio) {
-  // STOP previous audio
-  if (audioRef.current) {
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-  }
+      if (response?.data?.question) {
+        setCurrentQuestion(response.data.question);
+        setCurrentQuestionType("prepared");
 
-  const newAudio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-  audioRef.current = newAudio;
+        // 🔊 PLAY AUDIO HERE
+        if (response.data.audio) {
+          // STOP previous audio
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+          }
 
-  if (!isMuted) {
-    newAudio.play().catch(err => console.log("Autoplay blocked", err));
-  }
-}
-} else {
-        console.warn('No prepared question received, using fallback');
+          const newAudio = new Audio(
+            `data:audio/mp3;base64,${response.data.audio}`,
+          );
+          audioRef.current = newAudio;
+
+          if (!isMuted) {
+            newAudio
+              .play()
+              .catch((err) => console.log("Autoplay blocked", err));
+          }
+        }
+      } else {
+        console.warn("No prepared question received, using fallback");
         const fallbackQuestions = [
           "Can you explain how the Virtual DOM works in React and its performance benefits?",
           "What are the key differences between useMemo and useCallback in React?",
           "How do you manage state in a large-scale React application?",
           "What is the difference between controlled and uncontrolled components in React?",
-          "How would you optimize a React application's rendering performance?"
+          "How would you optimize a React application's rendering performance?",
         ];
-        const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
+        const nextQuestion =
+          fallbackQuestions[
+            Math.floor(Math.random() * fallbackQuestions.length)
+          ];
         setCurrentQuestion(nextQuestion);
-        setCurrentQuestionType('prepared');
+        setCurrentQuestionType("prepared");
       }
-      
+
       setIsPlaying(true);
       setTimeout(() => setIsPlaying(false), 2000);
     } catch (error) {
-      console.error('Error generating next question:', error);
+      console.error("Error generating next question:", error);
       const fallbackQuestions = [
         "Can you explain how the Virtual DOM works in React and its performance benefits?",
         "What are the key differences between useMemo and useCallback in React?",
-        "How do you manage state in a large-scale React application?"
+        "How do you manage state in a large-scale React application?",
       ];
-      const nextQuestion = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
+      const nextQuestion =
+        fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)];
       setCurrentQuestion(nextQuestion);
-      setCurrentQuestionType('prepared');
-      
+      setCurrentQuestionType("prepared");
+
       setIsPlaying(true);
       setTimeout(() => setIsPlaying(false), 2000);
     }
@@ -169,62 +234,72 @@ export default function InterviewPage() {
 
   const handleUserResponse = async (transcript) => {
     if (!transcript || transcript.trim().length === 0) {
-      console.warn('Empty or invalid transcript received');
+      console.warn("Empty or invalid transcript received");
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
-      const isNonInformative = transcript.trim().toLowerCase() === "i don't know" || 
-                             transcript.trim().toLowerCase() === "i dont know" ||
-                             transcript.trim().length < 10;
-      
+      const isNonInformative =
+        transcript.trim().toLowerCase() === "i don't know" ||
+        transcript.trim().toLowerCase() === "i dont know" ||
+        transcript.trim().length < 10;
+
       const newResponse = {
         id: Date.now(),
         question: currentQuestion,
         answer: transcript,
         timestamp: new Date().toISOString(),
         score: 0,
-        feedback: '',
-        expectedAnswer: '',
-        status: 'processing',
-        questionType: currentQuestionType
+        feedback: "",
+        expectedAnswer: "",
+        status: "processing",
+        questionType: currentQuestionType,
       };
-      
-      setResponses(prev => [...prev, newResponse]);
-      
+
+      setResponses((prev) => [...prev, newResponse]);
+
       const feedbackData = await generateAnswerFeedback(
         currentQuestion,
         transcript,
         currentInterviewId,
-        currentRound
+        currentRound,
       );
-      
-      setResponses(prev => 
-        prev.map(response => 
-          response.id === newResponse.id 
-            ? { 
-                ...response, 
+
+      setResponses((prev) =>
+        prev.map((response) =>
+          response.id === newResponse.id
+            ? {
+                ...response,
                 score: feedbackData.score || (isNonInformative ? 2 : 7),
-                feedback: feedbackData.feedback || (isNonInformative ? 'Please provide a more detailed response or clarify if you need help.' : 'Good response, could use more detail.'),
-                expectedAnswer: feedbackData.expectedAnswer || 'A complete response addressing the question.',
-                summary: feedbackData.summary || transcript.substring(0, 100) + '...',
-                status: 'completed'
+                feedback:
+                  feedbackData.feedback ||
+                  (isNonInformative
+                    ? "Please provide a more detailed response or clarify if you need help."
+                    : "Good response, could use more detail."),
+                expectedAnswer:
+                  feedbackData.expectedAnswer ||
+                  "A complete response addressing the question.",
+                summary:
+                  feedbackData.summary || transcript.substring(0, 100) + "...",
+                status: "completed",
               }
-            : response
-        )
+            : response,
+        ),
       );
-      
+
       const questionData = {
         question: currentQuestion,
         answer: transcript,
         score: feedbackData.score || (isNonInformative ? 2 : 7),
         feedback: feedbackData.feedback,
-        expectedAnswer: feedbackData.expectedAnswer || 'A complete response addressing the question.',
+        expectedAnswer:
+          feedbackData.expectedAnswer ||
+          "A complete response addressing the question.",
         summary: feedbackData.summary,
         timestamp: new Date().toISOString(),
-        questionType: currentQuestionType
+        questionType: currentQuestionType,
       };
 
       const newRoundQuestions = [...roundQuestions, questionData];
@@ -233,16 +308,16 @@ export default function InterviewPage() {
       if (newRoundQuestions.length >= QUESTIONS_PER_ROUND) {
         await completeCurrentRound();
         return;
-}
+      }
 
       if (feedbackData.needsFollowUp && !isNonInformative) {
         try {
-          const previousQuestions = roundQuestions.map(q => ({  
+          const previousQuestions = roundQuestions.map((q) => ({
             question: q.question,
             answer: q.answer,
-            feedback: q.feedback
+            feedback: q.feedback,
           }));
-          
+
           const followUpResponse = await generateContextualFollowUp(
             currentInterviewId,
             currentRound,
@@ -250,54 +325,64 @@ export default function InterviewPage() {
             transcript,
             previousQuestions,
             feedbackData,
-            feedbackData.followUpType
+            feedbackData.followUpType,
           );
 
           if (followUpResponse?.data?.question) {
-            console.log('Follow-up question generated:', followUpResponse.data.question);
+            console.log(
+              "Follow-up question generated:",
+              followUpResponse.data.question,
+            );
             setCurrentQuestion(followUpResponse.data.question);
             if (followUpResponse.data.audio) {
-      if (audioRef.current) {
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-  }
+              if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+              }
 
-  const newAudio = new Audio(`data:audio/mp3;base64,${followUpResponse.data.audio}`);
-  audioRef.current = newAudio;
+              const newAudio = new Audio(
+                `data:audio/mp3;base64,${followUpResponse.data.audio}`,
+              );
+              audioRef.current = newAudio;
 
-  if (!isMuted) {
-    newAudio.play().catch(err => console.log("Autoplay blocked", err));
-  }
-
-  }
-            setCurrentQuestionType('followup');
+              if (!isMuted) {
+                newAudio
+                  .play()
+                  .catch((err) => console.log("Autoplay blocked", err));
+              }
+            }
+            setCurrentQuestionType("followup");
             setIsPlaying(true);
             setTimeout(() => setIsPlaying(false), 2000);
           } else {
-            console.warn('No follow-up question received, generating next prepared question');
+            console.warn(
+              "No follow-up question received, generating next prepared question",
+            );
             await generateNextQuestion();
           }
         } catch (error) {
-          console.error('Error generating follow-up question:', error);
+          console.error("Error generating follow-up question:", error);
           await generateNextQuestion();
         }
       } else {
-        console.log('No follow-up needed or non-informative response, generating next prepared question');
+        console.log(
+          "No follow-up needed or non-informative response, generating next prepared question",
+        );
         await generateNextQuestion();
       }
     } catch (error) {
-      console.error('Error processing response:', error);
-      setResponses(prev =>
-        prev.map(response =>
+      console.error("Error processing response:", error);
+      setResponses((prev) =>
+        prev.map((response) =>
           response.id === newResponse.id
-            ? { 
-                ...response, 
-                status: 'error', 
-                feedback: 'Error processing response',
-                expectedAnswer: 'A complete response addressing the question.'
+            ? {
+                ...response,
+                status: "error",
+                feedback: "Error processing response",
+                expectedAnswer: "A complete response addressing the question.",
               }
-            : response
-        )
+            : response,
+        ),
       );
       await generateNextQuestion();
     } finally {
@@ -308,27 +393,29 @@ export default function InterviewPage() {
   const completeCurrentRound = async () => {
     try {
       setLoading(true);
-      
-      const roundScore = roundQuestions.reduce((sum, q) => sum + q.score, 0) / Math.max(roundQuestions.length, 1);
-      const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? 'Excellent performance!' : 'Good technical knowledge demonstrated.'}`;
-      
+
+      const roundScore =
+        roundQuestions.reduce((sum, q) => sum + q.score, 0) /
+        Math.max(roundQuestions.length, 1);
+      const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? "Excellent performance!" : "Good technical knowledge demonstrated."}`;
+
       const response = await completeRound(
-        currentInterviewId, 
-        currentRound, 
-        roundQuestions, 
-        roundFeedback
+        currentInterviewId,
+        currentRound,
+        roundQuestions,
+        roundFeedback,
       );
-      
+
       setFullInterview(response.interview);
       setCurrentRound(response.interview.currentRound);
-      
+
       if (currentRound < interviewData.totalRounds) {
         setShowRoundComplete(true);
       } else {
-        setInterviewStage('completed');
+        setInterviewStage("completed");
       }
     } catch (error) {
-      console.error('Error completing round:', error);
+      console.error("Error completing round:", error);
       if (currentRound < interviewData.totalRounds) {
         setShowRoundComplete(true);
       }
@@ -341,28 +428,32 @@ export default function InterviewPage() {
     try {
       setLoading(true);
 
-      if (fullInterview && fullInterview.status === 'active') {
+      if (fullInterview && fullInterview.status === "active") {
         const currentRoundIndex = currentRound - 1;
         let currentRoundData = fullInterview.rounds[currentRoundIndex];
-        if (currentRoundData.status === 'not_started') {
+        if (currentRoundData.status === "not_started") {
           await startRound(interviewData.interviewId, currentRound);
-          currentRoundData = { ...currentRoundData, status: 'in_progress', startedAt: new Date() };
+          currentRoundData = {
+            ...currentRoundData,
+            status: "in_progress",
+            startedAt: new Date(),
+          };
           const updatedRounds = [...fullInterview.rounds];
           updatedRounds[currentRoundIndex] = currentRoundData;
           setFullInterview({ ...fullInterview, rounds: updatedRounds });
         }
-        setInterviewStage('active');
+        setInterviewStage("active");
         if (roundQuestions.length < QUESTIONS_PER_ROUND) {
           await generateNextQuestion();
         } else {
           setShowRoundComplete(true);
         }
       } else {
-        setInterviewStage('active');
+        setInterviewStage("active");
         await generateNextQuestion();
       }
     } catch (error) {
-      console.error('Error starting/resuming interview:', error);
+      console.error("Error starting/resuming interview:", error);
     } finally {
       setLoading(false);
     }
@@ -372,61 +463,68 @@ export default function InterviewPage() {
     setShowRoundComplete(false);
     setRoundQuestions([]);
     setResponses([]);
-    setCurrentQuestionType('prepared');
-    setCurrentQuestion('');
+    setCurrentQuestionType("prepared");
+    setCurrentQuestion("");
     await startRound(interviewData.interviewId, currentRound);
     await generateNextQuestion();
   };
 
   const handleEndInterview = async () => {
+    stopQuestionAudio();
     try {
       await cancelInterview(interviewData.interviewId);
-      setFullInterview({ ...fullInterview, status: 'cancelled' });
+      setFullInterview({ ...fullInterview, status: "cancelled" });
     } catch (error) {
-      console.error('Error cancelling interview:', error);
+      console.error("Error cancelling interview:", error);
     }
     setShowRoundComplete(false);
-    setInterviewStage('completed');
+    setInterviewStage("completed");
   };
 
   const handleDeleteInterview = async () => {
-    if (window.confirm('Are you sure you want to delete this interview? This action cannot be undone.')) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this interview? This action cannot be undone.",
+      )
+    ) {
       try {
         await deleteInterview(interviewData.interviewId);
-        navigate('/pre-interview');
+        navigate("/pre-interview");
       } catch (error) {
-        console.error('Error deleting interview:', error);
-        alert('Failed to delete interview. Please try again.');
+        console.error("Error deleting interview:", error);
+        alert("Failed to delete interview. Please try again.");
       }
     }
   };
 
   const handleViewReport = () => {
-    navigate('/view-report', { state: { interviewId: interviewData.interviewId } });
+    navigate("/view-report", {
+      state: { interviewId: interviewData.interviewId },
+    });
   };
 
   const resetInterview = () => {
     setCurrentInterviewId(null);
     setFullInterview(null);
     setInterviewData({
-      role: 'Frontend Developer',
+      role: "Frontend Developer",
       totalRounds: 3,
-      interviewId: null
+      interviewId: null,
     });
     setResponses([]);
     setRoundQuestions([]);
-    setCurrentQuestion('');
-    setInterviewStage('ready');
+    setCurrentQuestion("");
+    setInterviewStage("ready");
     setShowRoundComplete(false);
-    navigate('/pre-interview');
+    navigate("/pre-interview");
   };
 
   const stopQuestionAudio = () => {
-  if (audioRef.current) {
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-  }
-};
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/50">
@@ -437,31 +535,36 @@ export default function InterviewPage() {
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-4 space-y-6"
           >
-            <motion.div
-              className="bg-white/80 backdrop-blur-sm rounded-2xl border border-cyan-200/40 shadow-xs p-4"
-            >
+            <motion.div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-cyan-200/40 shadow-xs p-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
                     <Target className="w-3 h-3 text-white" />
                   </div>
-                  <span className="text-sm font-semibold text-slate-900">Progress</span>
+                  <span className="text-sm font-semibold text-slate-900">
+                    Progress
+                  </span>
                 </div>
                 <div className="text-xs text-slate-500">
-Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.totalRounds}
+                  Round {showRoundComplete ? currentRound - 1 : currentRound}/
+                  {interviewData.totalRounds}
                 </div>
               </div>
 
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-slate-600">Questions Answered</span>
-                  <span className="text-slate-900">{responses.length}/{QUESTIONS_PER_ROUND}</span>
+                  <span className="text-slate-900">
+                    {responses.length}/{QUESTIONS_PER_ROUND}
+                  </span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
                     initial={{ width: 0 }}
-                    animate={{ width: `${(responses.length / QUESTIONS_PER_ROUND) * 100}%` }}
+                    animate={{
+                      width: `${(responses.length / QUESTIONS_PER_ROUND) * 100}%`,
+                    }}
                     transition={{ duration: 0.5 }}
                   />
                 </div>
@@ -471,7 +574,11 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-slate-600">Average Score</span>
                   <span className="text-emerald-600">
-                    {(responses.reduce((sum, r) => sum + r.score, 0) / responses.length).toFixed(1)}/10
+                    {(
+                      responses.reduce((sum, r) => sum + r.score, 0) /
+                      responses.length
+                    ).toFixed(1)}
+                    /10
                   </span>
                 </div>
               )}
@@ -501,7 +608,7 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white/70 backdrop-blur-sm rounded-2xl border border-cyan-200/40 shadow-xs"
               >
-                <div 
+                <div
                   onClick={() => setShowHistory(!showHistory)}
                   className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50/50 transition-colors"
                 >
@@ -509,7 +616,9 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                     <div className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
                       <Award className="w-3 h-3 text-white" />
                     </div>
-                    <span className="text-sm font-semibold text-slate-900">Responses ({responses.length})</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      Responses ({responses.length})
+                    </span>
                   </div>
                   <motion.div
                     animate={{ rotate: showHistory ? 180 : 0 }}
@@ -523,37 +632,45 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                   {showHistory && (
                     <motion.div
                       initial={{ height: 0 }}
-                      animate={{ height: 'auto' }}
+                      animate={{ height: "auto" }}
                       exit={{ height: 0 }}
                       className="overflow-hidden"
                     >
                       <div className="p-3 max-h-40 overflow-y-auto space-y-2">
-                        {responses.slice().reverse().map((response, idx) => (
-                          <motion.div
-                            key={response.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="p-2 rounded-lg bg-slate-50/50 border border-slate-200/40"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-cyan-600">
-                                Q{responses.length - idx}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <div className={`w-1.5 h-1.5 rounded-full ${
-                                  response.status === 'completed' ? 'bg-emerald-500' : 
-                                  response.status === 'processing' ? 'bg-amber-500' : 'bg-rose-500'
-                                }`} />
-                                <span className="text-xs font-semibold text-slate-700">
-                                  {response.score}/10
+                        {responses
+                          .slice()
+                          .reverse()
+                          .map((response, idx) => (
+                            <motion.div
+                              key={response.id}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              className="p-2 rounded-lg bg-slate-50/50 border border-slate-200/40"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-medium text-cyan-600">
+                                  Q{responses.length - idx}
                                 </span>
+                                <div className="flex items-center gap-1">
+                                  <div
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      response.status === "completed"
+                                        ? "bg-emerald-500"
+                                        : response.status === "processing"
+                                          ? "bg-amber-500"
+                                          : "bg-rose-500"
+                                    }`}
+                                  />
+                                  <span className="text-xs font-semibold text-slate-700">
+                                    {response.score}/10
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            <p className="text-xs text-slate-600 line-clamp-2">
-                              {response.answer}
-                            </p>
-                          </motion.div>
-                        ))}
+                              <p className="text-xs text-slate-600 line-clamp-2">
+                                {response.answer}
+                              </p>
+                            </motion.div>
+                          ))}
                       </div>
                     </motion.div>
                   )}
@@ -575,9 +692,13 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                     <Mic className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">Live Session</h3>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Live Session
+                    </h3>
                     <p className="text-xs text-slate-600">
-                     Round {showRoundComplete ? currentRound - 1 : currentRound} • Question {roundQuestions.length + 1}/{QUESTIONS_PER_ROUND}
+                      Round{" "}
+                      {showRoundComplete ? currentRound - 1 : currentRound} •
+                      Question {roundQuestions.length + 1}/{QUESTIONS_PER_ROUND}
                     </p>
                   </div>
                 </div>
@@ -587,27 +708,37 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsMuted(!isMuted)}
                     className={`p-2 rounded-lg transition-colors ${
-                      isMuted ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      isMuted
+                        ? "bg-rose-100 text-rose-600"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
                   >
-                    {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {isMuted ? (
+                      <MicOff className="w-4 h-4" />
+                    ) : (
+                      <Mic className="w-4 h-4" />
+                    )}
                   </motion.button>
                 </div>
               </div>
 
               <div className="flex-1 p-4">
-               <LiveInterview 
-  currentQuestion={currentQuestion}
-  onUserResponse={handleUserResponse}
-  onStatusUpdate={(status) => console.log('Interview status:', status)}
-  onStopAudio={stopQuestionAudio}   // ✅ ADD THIS
-  disabled={interviewStage !== 'active' || loading || showRoundComplete}
-/>
+                <LiveInterview
+                  currentQuestion={currentQuestion}
+                  onUserResponse={handleUserResponse}
+                  onStatusUpdate={(status) =>
+                    console.log("Interview status:", status)
+                  }
+                  onStopAudio={stopQuestionAudio} // ✅ ADD THIS
+                  disabled={
+                    interviewStage !== "active" || loading || showRoundComplete
+                  }
+                />
               </div>
 
               <div className="p-4 border-t border-slate-200/40">
                 <AnimatePresence mode="wait">
-                  {interviewStage === 'ready' && (
+                  {interviewStage === "ready" && (
                     <motion.button
                       key="start"
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -624,11 +755,11 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                       ) : (
                         <Play className="w-4 h-4" />
                       )}
-                      {loading ? 'Starting...' : 'Begin Interview'}
+                      {loading ? "Starting..." : "Begin Interview"}
                     </motion.button>
                   )}
 
-                  {interviewStage === 'active' && !showRoundComplete && (
+                  {interviewStage === "active" && !showRoundComplete && (
                     <motion.div
                       key="active"
                       initial={{ opacity: 0 }}
@@ -674,9 +805,13 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                         <CheckCircle className="w-6 h-6 text-white" />
                       </motion.div>
                       <div>
-                        <h3 className="text-lg font-bold text-emerald-800">Round {currentRound - 1} Complete!</h3>
+                        <h3 className="text-lg font-bold text-emerald-800">
+                          Round {currentRound - 1} Complete!
+                        </h3>
                         <p className="text-sm text-emerald-600 mt-1">
-                          {currentRound <= interviewData.totalRounds ? 'Ready for next round?' : 'All rounds completed!'}
+                          {currentRound <= interviewData.totalRounds
+                            ? "Ready for next round?"
+                            : "All rounds completed!"}
                         </p>
                       </div>
                       <div className="flex gap-3 justify-center">
@@ -713,7 +848,7 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                     </motion.div>
                   )}
 
-                  {interviewStage === 'completed' && !showRoundComplete && (
+                  {interviewStage === "completed" && !showRoundComplete && (
                     <motion.div
                       key="complete"
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -728,9 +863,12 @@ Round {showRoundComplete ? currentRound - 1 : currentRound}/{interviewData.total
                         <Crown className="w-6 h-6 text-white" />
                       </motion.div>
                       <div>
-                        <h3 className="text-lg font-bold text-cyan-800">Interview Complete!</h3>
+                        <h3 className="text-lg font-bold text-cyan-800">
+                          Interview Complete!
+                        </h3>
                         <p className="text-sm text-cyan-600 mt-1">
-                          You've completed all {interviewData.totalRounds} rounds
+                          You've completed all {interviewData.totalRounds}{" "}
+                          rounds
                         </p>
                       </div>
                       <div className="flex gap-3 justify-center">

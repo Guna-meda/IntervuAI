@@ -33,6 +33,7 @@ const [localSkills, setLocalSkills] = useState(Array.isArray(storedSkills) ? sto
   const [newProficiency, setNewProficiency] = useState(3);
   const [roleSearch, setRoleSearch] = useState('');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showDifficultyDropdown, setShowDifficultyDropdown] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -191,8 +192,9 @@ const [localSkills, setLocalSkills] = useState(Array.isArray(storedSkills) ? sto
     ));
   };
 
-  const handleStartInterview = async (isRetake = false, difficulty = selectedDifficulty) => {
-    if (!auth.currentUser) {
+const handleStartInterview = async (isRetake = false, difficultyParam) => {
+  const difficulty = difficultyParam || interview?.difficulty || selectedDifficulty;
+      if (!auth.currentUser) {
       alert('Please log in to start an interview');
       return;
     }
@@ -205,17 +207,20 @@ const [localSkills, setLocalSkills] = useState(Array.isArray(storedSkills) ? sto
       }
       finalRole = customRole;
     } else {
-      if (!isExistingInterview && !isRetake && !selectedRole) {
-        alert('Please select a role to continue');
-        return;
-      }
-      const roleData = isRetake && interview
-        ? { label: interview.role }
-        : allRoles.find(r => r.value === selectedRole);
-      if (!roleData) {
-        throw new Error('Selected role not found');
-      }
-      finalRole = roleData.label;
+      if (isExistingInterview && !isRetake && interview) {
+  // ✅ CONTINUE INTERVIEW → use existing role
+  finalRole = interview.role;
+} else {
+  const roleData = isRetake && interview
+    ? { label: interview.role }
+    : allRoles.find(r => r.value === selectedRole);
+
+  if (!roleData) {
+    throw new Error('Selected role not found');
+  }
+
+  finalRole = roleData.label;
+}
     }
 
     setIsLoading(true);
@@ -460,20 +465,52 @@ const [localSkills, setLocalSkills] = useState(Array.isArray(storedSkills) ? sto
                 <div className="space-y-6">
                   {/* Difficulty Level Dropdown */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Difficulty Level
-                    </label>
+                   
                     <div className="relative">
-                      <select
-                        value={selectedDifficulty}
-                        onChange={(e) => setSelectedDifficulty(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none appearance-none cursor-pointer"
-                      >
-                        <option value="Beginner">Beginner</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Difficulty Level
+  </label>
+
+  <div className="relative">
+    {/* Trigger */}
+    <button
+      onClick={() => setShowDifficultyDropdown(!showDifficultyDropdown)}
+      className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-left flex items-center justify-between"
+    >
+      <span className="text-gray-900">
+        {selectedDifficulty || "Select difficulty"}
+      </span>
+      <ChevronDown
+        className={`w-4 h-4 text-gray-400 transition-transform ${
+          showDifficultyDropdown ? 'rotate-180' : ''
+        }`}
+      />
+    </button>
+
+    {/* Dropdown */}
+    {showDifficultyDropdown && (
+      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
+        {["Beginner", "Intermediate", "Advanced"].map((level) => (
+          <button
+            key={level}
+            onClick={() => {
+              setSelectedDifficulty(level);
+              setShowDifficultyDropdown(false);
+            }}
+            className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between"
+          >
+            <span className="font-medium text-gray-900">{level}</span>
+
+            {selectedDifficulty === level && (
+              <CheckCircle2 className="w-4 h-4 text-blue-500" />
+            )}
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
                     </div>
                   </div>
 

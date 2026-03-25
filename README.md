@@ -10,6 +10,8 @@ The goal is simple: practice interviews in a way that actually helps you improve
 ![alt text](image.png)
 ![alt text](image-1.png)![alt text](image-2.png)![alt text](image-3.png)
 
+Wordering how the interview room looks? Try it out yourself!
+
 ## What You Can Do
 
 - Set role + difficulty and start structured interview rounds

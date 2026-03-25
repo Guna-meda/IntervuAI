@@ -25,27 +25,21 @@ The goal is simple: practice interviews in a way that actually helps you improve
 - Multi-round interview sessions with configurable role and difficulty.
 - AI-driven prepared questions and contextual follow-up flow.
 - Real-time response capture and feedback loop per question.
-- Progress-aware session continuation for active interviews.
 
 ### 2) Live Interview Room
 - Browser media capture using WebRTC media APIs.
-- Audio activity analysis and speaking-state detection.
 - Live speech recording/transcription service integration.
-- User guidance for muted/no-speech scenarios.
 
 ### 3) Advanced Analytics
 - Performance dashboard with score trends and skill insights.
 - Session statistics (history, completion, averages, consistency).
 - Data visualizations via charts for easy interpretation.
-- Visual progress signals for improvements and weak areas.
 
 ### 4) Detailed Performance Reports
 - Rich interview report view with round-level drill-down.
 - Summary + analytics tabs for fast and deep analysis.
-- Export report to PDF using client-side rendering tools.
 
 ### 5) User Profile + Progression
-- Profile setup/edit flows with avatar and cover support.
 - Persistent user session + app state using Zustand stores.
 - Level/progression indicators based on interview activity.
 

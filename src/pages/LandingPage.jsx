@@ -2,9 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useInView, useAnimation } from 'framer-motion';
 import { Sparkles, Video, Zap, TrendingUp, Play, ArrowRight, Menu, X, Star, Award, Brain } from 'lucide-react';
 import interviewImg from '../assets/interview.png';
+import image1 from '../../image-1.png';
+import image2 from '../../image-2.png';
+import image3 from '../../image-3.png';
+import image4 from '../../image.png';
 import useAuthStore from '../store/authStore';
 import {  loginWithGoogle,getCurrentUserWithToken, completeRedirectLogin} from '../firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { Mail, Github, Linkedin, Globe } from "lucide-react";
+
 
 export default function IntervuAILanding() {
 
@@ -89,6 +95,29 @@ const messages = [
 ];
 
 
+const demos = [
+  {
+    img: image4,
+    title: "Real Interview Simulation",
+    desc: "Experience actual interview pressure with camera, mic, and AI-driven questions that adapt to you.",
+  },
+  {
+    img: image2,
+    title: "Smart Feedback Engine",
+    desc: "Get brutally honest feedback on communication, confidence, and answers instantly.",
+  },
+  {
+    img: image3,
+    title: "Personal Profile page",
+    desc: "Track your growth with visual insights and improve where it actually matters.",
+  },
+  {
+    img: image1,
+    title: "Role-Based Practice",
+    desc: "Tailored interviews for your domain — from tech to business roles.",
+  },
+];
+
 React.useEffect(() => {
   const interval = setInterval(() => {
     setIndex((prev) => (prev + 1) % messages.length);
@@ -171,7 +200,7 @@ if (isMobile) {
 
         {/* Tagline */}
         <p className="text-xs text-gray-500">
-          Come back stronger. Veda’s waiting 👀
+          Come back stronger. 
         </p>
 
       </div>
@@ -205,13 +234,10 @@ if (isMobile) {
               </div>
               <div>
                 <div className="text-lg font-bold tracking-tight text-gray-800">IntervuAI</div>
-                <div className="text-xs text-gray-500 -mt-0.5">powered by Veda</div>
               </div>
             </div>
 
             <div className="hidden md:flex items-center gap-5">
-              <a href="#" className="text-gray-600 hover:text-blue-500 font-medium text-sm transition">Features</a>
-              <a href="#" className="text-gray-600 hover:text-blue-500 font-medium text-sm transition">How it works</a>
               <motion.button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm shadow-sm"
                 whileHover={{ scale: 1.05 }}
@@ -299,17 +325,7 @@ if (isMobile) {
                 </motion.button>
               </div>
 
-              <div className="flex items-center gap-4 pt-2">
-                <div className="flex -space-x-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-300 to-cyan-400 border-2 border-white shadow-sm" />
-                  ))}
-                </div>
-                <div className="text-xs">
-                  <div className="font-semibold text-gray-800">2,847 students</div>
-                  <div className="text-gray-600">crushed interviews this week</div>
-                </div>
-              </div>
+             
             </div>
 
             <div className="relative h-[350px] md:h-[450px] flex items-center justify-center">
@@ -402,54 +418,213 @@ if (isMobile) {
                 {feature.icon}
                 <h3 className="text-xl font-bold text-gray-800 mb-2">{feature.title}</h3>
                 <div className="text-sm text-gray-600">{feature.description}</div>
-                <motion.button
-                  className="mt-4 text-blue-500 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
-                  whileHover={{ x: 5 }}
-                  transition={{ type: 'spring', stiffness: 400 }}
-                >
-                  Learn More <ArrowRight className="inline w-4 h-4" />
-                </motion.button>
+                
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section - Framer Motion Scroll Animation */}
-      <section className="py-16 px-4 relative overflow-hidden" ref={ctaRef}>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-cyan-200 opacity-50">
-          <div className="wave-bg"></div>
-        </div>
-        <motion.div
-          className="max-w-4xl mx-auto relative z-10"
-          variants={ctaVariants}
-          initial="hidden"
-          animate={ctaControls}
+      <section className="py-28 px-6">
+  <div className="max-w-6xl mx-auto space-y-32">
+
+    {demos.map((demo, i) => {
+      const isReverse = i % 2 !== 0;
+
+      return (
+        <div
+          key={i}
+          className={`flex flex-col md:flex-row items-center gap-12 ${
+            isReverse ? "md:flex-row-reverse" : ""
+          }`}
         >
-          <div className="bg-blue-100/20 backdrop-blur-md rounded-2xl p-8 shadow-lg border border-blue-200/50 text-center space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 leading-tight">
-              Ready to
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500">
-                ace your interviews?
-              </span>
-            </h2>
-            <p className="text-base text-gray-600 max-w-md mx-auto">
-              Join thousands who’ve turned prep into power with Veda’s AI-driven practice.
+
+         <motion.div
+  initial={{ opacity: 0, x: isReverse ? 100 : -100 }}
+  whileInView={{ opacity: 1, x: 0 }}
+  transition={{ duration: 0.9 }}
+  viewport={{ once: true }}
+  className="w-full md:w-[60%]"
+>
+  <div className="relative rounded-2xl shadow-xl border border-blue-200/40 bg-white/30 p-2">
+
+    {/* glow (subtle, not overpowering) */}
+    <div className="absolute inset-0 bg-gradient-to-tr from-blue-300/10 to-cyan-300/10 blur-xl"></div>
+
+    <img
+      src={demo.img}
+      alt={demo.title}
+      className="relative w-full h-auto object-contain"
+    />
+
+  </div>
+</motion.div>
+
+          {/* TEXT */}
+          <motion.div
+            initial={{ opacity: 0, x: isReverse ? -100 : 100 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.9, delay: 0.2 }}
+            viewport={{ once: true }}
+            className="w-full md:w-1/2 space-y-5"
+          >
+            <h3 className="text-3xl md:text-4xl font-bold text-gray-800 leading-tight">
+              {demo.title}
+            </h3>
+
+            <p className="text-gray-600 text-lg leading-relaxed max-w-lg">
+              {demo.desc}
             </p>
-            <motion.button
-              className="group relative px-8 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold text-base shadow-md"
-              variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
-              animate={{ scale: [1, 1.02, 1], transition: { duration: 2, repeat: Infinity } }}
-            >
-              <span className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-30 transition-opacity rounded-lg"></span>
-              <span className="relative">Get Started Free <ArrowRight className="inline w-4 h-4 ml-1" /></span>
-            </motion.button>
-            <p className="text-xs text-gray-500">No card needed. Just pure prep.</p>
-          </div>
-        </motion.div>
-      </section>
+
+            <div className="w-20 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
+          </motion.div>
+
+        </div>
+      );
+    })}
+    
+<div className="text-center space-y-3 ">
+  <p className="text-lg md:text-xl font-semibold text-gray-800">
+    Wondering what the live interview room looks like?
+  </p>
+
+  <p className="text-gray-600 text-sm md:text-base">
+    Stop searching screenshots — just try it.
+  </p>
+</div>
+  </div>
+  
+
+</section>
+
+   <section className="py-20 px-6">
+  <div className="max-w-5xl mx-auto text-center space-y-12">
+    
+
+    {/* Heading */}
+    <div className="space-y-4">
+      <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
+        What happens when you start?
+      </h2>
+      <p className="text-gray-600 max-w-xl mx-auto">
+        No fluff. Just real practice, real feedback, and real improvement.
+      </p>
+    </div>
+
+    {/* Steps */}
+    <div className="grid md:grid-cols-3 gap-6 text-left">
+
+      {[
+        {
+          title: "1. Start an interview",
+          desc: "Pick your role and difficulty. Veda begins instantly.",
+        },
+        {
+          title: "2. Face real questions",
+          desc: "Camera on. Mic live. Just like an actual interview.",
+        },
+        {
+          title: "3. Improve fast",
+          desc: "Get feedback that actually tells you what to fix.",
+        },
+      ].map((step, i) => (
+        <div
+          key={i}
+          className="bg-blue-100/20 border border-blue-200/40 rounded-xl p-6 backdrop-blur-sm"
+        >
+          <h3 className="font-semibold text-gray-800 mb-2">
+            {step.title}
+          </h3>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {step.desc}
+          </p>
+        </div>
+      ))}
+
+    </div>
+
+
+  </div>
+</section>
+
+<footer className="mt-2 border-t border-blue-200/50 bg-gradient-to-b from-blue-50 to-blue-100/40">
+
+  <div className="max-w-6xl mx-auto px-6 py-12">
+
+    {/* TOP */}
+    <div className="flex flex-col md:flex-row justify-between gap-10">
+
+      {/* LEFT */}
+      <div className="max-w-sm space-y-4">
+        <h2 className="text-2xl font-bold text-gray-800">
+          IntervuAI
+        </h2>
+
+        <p className="text-gray-600 text-sm leading-relaxed">
+          Practice real interviews with AI that actually challenges you.
+        </p>
+
+        <button
+          onClick={handleLogin}
+          className="mt-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+        >
+          Try Interview →
+        </button>
+      </div>
+
+      {/* RIGHT */}
+      <div className="flex flex-col gap-3 text-sm text-gray-600">
+
+        <a
+          href="mailto:meda.gunavathi25@gmail.com"
+          className="flex items-center gap-2 hover:text-blue-600 transition"
+        >
+          <Mail size={16} />
+          meda.gunavathi25@gmail.com
+        </a>
+
+        <a
+          href="https://github.com/Guna-meda"
+          target="_blank"
+          className="flex items-center gap-2 hover:text-blue-600 transition"
+        >
+          <Github size={16} />
+          github.com/Guna-meda
+        </a>
+
+        <a
+          href="https://www.linkedin.com/in/gunavathi-mi"
+          target="_blank"
+          className="flex items-center gap-2 hover:text-blue-600 transition"
+        >
+          <Linkedin size={16} />
+          linkedin.com/in/gunavathi-mi
+        </a>
+
+        <a
+          href="https://gunaportfilo.vercel.app"
+          target="_blank"
+          className="flex items-center gap-2 hover:text-blue-600 transition"
+        >
+          <Globe size={16} />
+          View Portfolio
+        </a>
+
+      </div>
+
+    </div>
+
+    {/* BOTTOM */}
+    <div className="mt-10 pt-6 border-t border-blue-200/40 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 gap-3">
+
+      <span>© {new Date().getFullYear()} IntervuAI</span>
+
+      <span>built by Guna ⚡</span>
+
+    </div>
+
+  </div>
+</footer>
 
       <style jsx>{`
         @keyframes float {

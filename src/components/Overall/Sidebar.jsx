@@ -1,28 +1,35 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  BarChart2, TrendingUp, Target, Settings, 
-  LogOut, Menu, X, Sparkles, Bell, User
+  BarChart2, TrendingUp, Target,
+  LogOut, Menu, X, Sparkles
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { logout } from '../../firebase/auth';
   import { useUserStore } from '../../store/userStore';
+import useAuthStore from '../../store/authStore';
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { user } = useUserStore();
 
-  const userInitial =
-  user?.displayName?.charAt(0)?.toUpperCase() ||
-  user?.profile?.fullName?.charAt(0)?.toUpperCase() ||
+  const { user: firebaseUser, mongoUser } = useAuthStore();
+const { user } = useUserStore();
+
+// 🔥 final user (priority order)
+const finalUser = user || mongoUser || firebaseUser;
+
+ const userInitial =
+  finalUser?.displayName?.charAt(0)?.toUpperCase() ||
+  finalUser?.profile?.fullName?.charAt(0)?.toUpperCase() ||
+  finalUser?.email?.charAt(0)?.toUpperCase() ||
   "U";
 
-  const userName =
-  user?.displayName ||
-  user?.profile?.fullName ||
+const userName =
+  finalUser?.displayName ||
+  finalUser?.profile?.fullName ||
+  finalUser?.email?.split("@")[0] ||
   "User";
-
+  
   const navItems = [
     { href: '/overview', icon: BarChart2, label: 'Dashboard' },
     { href: '/intervuai', icon: Target, label: 'IntervuAI' },
@@ -31,11 +38,10 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 
  return (
   <>
-    {/* Desktop Sidebar */}
     <motion.aside
       initial={false}
       animate={{ width: isOpen ? 280 : 80 }}
-      className="hidden lg:block fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-40"
+      className="fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-40"
     >
       <div className="flex flex-col h-full p-4">
         {/* Logo */}
@@ -100,7 +106,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
         <div className="border-t border-gray-200 pt-4 mt-4">
           <Link to="/profile">
             <motion.div
-  className="flex items-center gap-3 px-4 py-3 min-h-[52px] rounded-xl hover:bg-gray-100 cursor-pointer transition-all"
+  className="flex items-center px-1 py-3 min-h-[52px] rounded-xl hover:bg-gray-100 cursor-pointer transition-all"
               whileHover={{ scale: 1.02 }}
             >
              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold shrink-0 shadow-md">
@@ -150,110 +156,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
         </button>
       </div>
     </motion.aside>
-
-    {/* Mobile Header */}
-    <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 p-4 z-50 flex items-center justify-between shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="bg-gradient-to-br from-blue-500 to-cyan-500 w-10 h-10 rounded-xl flex items-center justify-center">
-          <Sparkles className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <div className="font-bold text-gray-800">IntervuAI</div>
-          <div className="text-xs text-gray-500">powered by Veda</div>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 rounded-lg hover:bg-gray-100"
-        >
-          <Bell className="w-5 h-5 text-gray-600" />
-        </motion.button>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-lg hover:bg-gray-100"
-        >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-    </div>
-
-    {/* Mobile Menu Overlay */}
-    <AnimatePresence>
-      {mobileMenuOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="lg:hidden fixed inset-0 bg-black/50 z-40"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 20 }}
-            className="lg:hidden fixed top-0 right-0 bottom-0 w-80 bg-white shadow-2xl z-50 p-6"
-          >
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-gray-800">Menu</h2>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-gray-100"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <nav className="space-y-2 mb-8">
-              {navItems.map((item, idx) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={idx}
-                    to={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="border-t border-gray-200 pt-4 space-y-2">
-              <Link
-                to="/profile"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white font-bold shrink-0 shadow-md">
-  {userInitial}
-</div>
-                <div>
-                  <div className="font-semibold text-gray-800">{user?.displayName || user?.profile?.fullName || "User"}</div>
-                  <div className="text-xs text-gray-500">View Profile</div>
-                </div>
-              </Link>
-              <button
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 w-full"
-                onClick={() => logout()}
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Log Out</span>
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
   </>
 );
 }

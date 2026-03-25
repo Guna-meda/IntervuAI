@@ -7,7 +7,8 @@ export default function LiveInterview({
   onResponse,
   onUserResponse,
   onStatusUpdate,
-  onStopAudio
+  onStopAudio,
+  disabled = false,
 }) {
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
@@ -107,7 +108,7 @@ const stopListening = async () => {
   <div className="mt-4 flex space-x-4">
             <button
               onClick={startListening}
-              disabled={isListening || !currentQuestion }
+              disabled={disabled || isListening || !currentQuestion}
               className="px-4 py-2 bg-green-500 text-white rounded disabled:bg-gray-400"
             >
               Start Speaking

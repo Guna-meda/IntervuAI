@@ -319,19 +319,16 @@ export default function ViewReport() {
                   {
                     label: "Total Questions",
                     value: allQuestions.length,
-                    icon: MessageSquare,
                     color: "from-blue-500 to-cyan-500",
                   },
                   {
                     label: "Average Response",
                     value: `${getOverallScore()}/10`,
-                    icon: TrendingUp,
                     color: "from-emerald-500 to-green-500",
                   },
                   {
                     label: "Success Rate",
                     value: `${Math.round((getOverallScore() / 10) * 100)}%`,
-                    icon: Zap,
                     color: "from-purple-500 to-pink-500",
                   },
                 ].map((stat, idx) => (
@@ -342,11 +339,7 @@ export default function ViewReport() {
                     transition={{ delay: idx * 0.1 }}
                     className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-cyan-200/40 shadow-xs text-center"
                   >
-                    <div
-                      className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mx-auto mb-4`}
-                    >
-                      <stat.icon className="w-6 h-6 text-white" />
-                    </div>
+                   
                     <p className="text-2xl font-bold text-slate-900 mb-1">
                       {stat.value}
                     </p>

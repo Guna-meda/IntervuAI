@@ -58,6 +58,7 @@ export default function InterviewPage() {
   });
   const [fullInterview, setFullInterview] = useState(null);
   const audioRef = useRef(null);
+  const isSubmittingResponseRef = useRef(false);
   const [showNoSpeechPopup, setShowNoSpeechPopup] = useState(false);
 
   const { currentInterviewId, availableRoles, setCurrentInterviewId } =
@@ -238,7 +239,18 @@ export default function InterviewPage() {
       return;
     }
 
+    if (isSubmittingResponseRef.current || loading || !currentQuestion) {
+      return;
+    }
+
+    if (roundQuestions.length >= QUESTIONS_PER_ROUND) {
+      await completeCurrentRound(roundQuestions);
+      return;
+    }
+
+    isSubmittingResponseRef.current = true;
     setLoading(true);
+    let newResponse;
 
     try {
       const isNonInformative =
@@ -246,7 +258,7 @@ export default function InterviewPage() {
         transcript.trim().toLowerCase() === "i dont know" ||
         transcript.trim().length < 10;
 
-      const newResponse = {
+      newResponse = {
         id: Date.now(),
         question: currentQuestion,
         answer: transcript,
@@ -302,11 +314,14 @@ export default function InterviewPage() {
         questionType: currentQuestionType,
       };
 
-      const newRoundQuestions = [...roundQuestions, questionData];
+      const newRoundQuestions = [...roundQuestions, questionData].slice(
+        0,
+        QUESTIONS_PER_ROUND,
+      );
       setRoundQuestions(newRoundQuestions);
 
       if (newRoundQuestions.length >= QUESTIONS_PER_ROUND) {
-        await completeCurrentRound();
+        await completeCurrentRound(newRoundQuestions);
         return;
       }
 
@@ -372,37 +387,40 @@ export default function InterviewPage() {
       }
     } catch (error) {
       console.error("Error processing response:", error);
-      setResponses((prev) =>
-        prev.map((response) =>
-          response.id === newResponse.id
-            ? {
-                ...response,
-                status: "error",
-                feedback: "Error processing response",
-                expectedAnswer: "A complete response addressing the question.",
-              }
-            : response,
-        ),
-      );
+      if (newResponse?.id) {
+        setResponses((prev) =>
+          prev.map((response) =>
+            response.id === newResponse.id
+              ? {
+                  ...response,
+                  status: "error",
+                  feedback: "Error processing response",
+                  expectedAnswer: "A complete response addressing the question.",
+                }
+              : response,
+          ),
+        );
+      }
       await generateNextQuestion();
     } finally {
       setLoading(false);
+      isSubmittingResponseRef.current = false;
     }
   };
 
-  const completeCurrentRound = async () => {
+  const completeCurrentRound = async (questionsForRound = roundQuestions) => {
     try {
       setLoading(true);
 
       const roundScore =
-        roundQuestions.reduce((sum, q) => sum + q.score, 0) /
-        Math.max(roundQuestions.length, 1);
+        questionsForRound.reduce((sum, q) => sum + q.score, 0) /
+        Math.max(questionsForRound.length, 1);
       const roundFeedback = `Round ${currentRound} completed with average score of ${roundScore.toFixed(1)}/10. ${roundScore >= 7 ? "Excellent performance!" : "Good technical knowledge demonstrated."}`;
 
       const response = await completeRound(
         currentInterviewId,
         currentRound,
-        roundQuestions,
+        questionsForRound,
         roundFeedback,
       );
 
@@ -698,7 +716,7 @@ export default function InterviewPage() {
                     <p className="text-xs text-slate-600">
                       Round{" "}
                       {showRoundComplete ? currentRound - 1 : currentRound} •
-                      Question {roundQuestions.length + 1}/{QUESTIONS_PER_ROUND}
+                      Question {Math.min(roundQuestions.length + 1, QUESTIONS_PER_ROUND)}/{QUESTIONS_PER_ROUND}
                     </p>
                   </div>
                 </div>
@@ -866,10 +884,7 @@ export default function InterviewPage() {
                         <h3 className="text-lg font-bold text-cyan-800">
                           Interview Complete!
                         </h3>
-                        <p className="text-sm text-cyan-600 mt-1">
-                          You've completed all {interviewData.totalRounds}{" "}
-                          rounds
-                        </p>
+                        
                       </div>
                       <div className="flex gap-3 justify-center">
                         <motion.button

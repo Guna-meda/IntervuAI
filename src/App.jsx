@@ -14,7 +14,9 @@ import ViewReport from "./components/InterviewRoom/ViewReport";
 const AppContent = () => {
   const { user, loading } = useAuthStore();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(
+    () => window.innerWidth >= 1250
+  );
 
   // Combine both useEffects into one to maintain hook order
   React.useEffect(() => {
@@ -23,6 +25,13 @@ const AppContent = () => {
       setIsSidebarOpen(false);
     };
     window.addEventListener('closeSidebar', closeSidebar);
+
+    // Auto-collapse below 1250px, auto-expand at 1250px and above.
+    const handleResize = () => {
+      setIsSidebarOpen(window.innerWidth >= 1250);
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
 
     // Navigation logic based on auth state
     if (!loading && user) {
@@ -39,6 +48,7 @@ const AppContent = () => {
     // Cleanup
     return () => {
       window.removeEventListener('closeSidebar', closeSidebar);
+      window.removeEventListener('resize', handleResize);
     };
   }, [user, loading, navigate]); // Dependencies include user, loading, and navigate
 
@@ -55,7 +65,7 @@ const AppContent = () => {
       {user ? (
         <div className="flex">
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-          <div className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64 ml-0' : 'lg:ml-20 ml-0'} pt-16 lg:pt-0`}>
+          <div className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
             <Routes>
               <Route path="/overview" element={<Overview />} />
               <Route path="/intervuai" element={<IntervuAI />} />

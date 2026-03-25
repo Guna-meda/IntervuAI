@@ -1,16 +1,73 @@
-# React + Vite
+# Intervu AI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Try it out : https://intervu-ai-eta.vercel.app
 
-Currently, two official plugins are available:
+A realistic AI interview simulator - built to feel like an actual product, not a demo.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+You go through a proper interview flow: setup -> live interview -> feedback -> analytics.
+The goal is simple: practice interviews in a way that actually helps you improve.
 
-## React Compiler
+![alt text](image.png)
+![alt text](image-1.png)![alt text](image-2.png)![alt text](image-3.png)
 
-The React Compiler is not enabled on this template. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## What You Can Do
 
-## Expanding the ESLint configuration
+- Set role + difficulty and start structured interview rounds
+- Answer questions with live mic/camera
+- Get AI-generated feedback instantly
+- Track your performance across sessions
+- View detailed analytics and reports
+- Export reports to PDF if needed
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Core Features
+
+### 1) Smart Interview Experience
+- Multi-round interview sessions with configurable role and difficulty.
+- AI-driven prepared questions and contextual follow-up flow.
+- Real-time response capture and feedback loop per question.
+- Progress-aware session continuation for active interviews.
+
+### 2) Live Interview Room
+- Browser media capture using WebRTC media APIs.
+- Audio activity analysis and speaking-state detection.
+- Live speech recording/transcription service integration.
+- User guidance for muted/no-speech scenarios.
+
+### 3) Advanced Analytics
+- Performance dashboard with score trends and skill insights.
+- Session statistics (history, completion, averages, consistency).
+- Data visualizations via charts for easy interpretation.
+- Visual progress signals for improvements and weak areas.
+
+### 4) Detailed Performance Reports
+- Rich interview report view with round-level drill-down.
+- Summary + analytics tabs for fast and deep analysis.
+- Export report to PDF using client-side rendering tools.
+
+### 5) User Profile + Progression
+- Profile setup/edit flows with avatar and cover support.
+- Persistent user session + app state using Zustand stores.
+- Level/progression indicators based on interview activity.
+
+### 6) Auth + Secure App Flow
+- Firebase authentication integration.
+- Protected app routes with authenticated navigation.
+- Token-aware API communication to backend services.
+
+## Tech Stack
+
+- React + Vite
+- Zustand (state management)
+- Tailwind CSS
+- Firebase Auth
+- WebRTC (media handling)
+- Recharts (analytics)
+- Framer Motion (animations)
+- Backend (Node.js/Express) + OpenAI API (not included in this repo)
+- For transcription and audio processing, Google API is used.
+
+## Note
+
+This repo is the frontend part.
+Backend + Firebase config is required for full functionality.
+

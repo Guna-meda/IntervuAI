@@ -271,7 +271,6 @@ export default function ViewReport() {
         >
           {[
             { id: "overview", label: "Overview", icon: BarChart3 },
-            { id: "analytics", label: "Analytics", icon: Activity },
             { id: "details", label: "Round Details", icon: Target },
           ].map((tab) => (
             <button
@@ -313,6 +312,35 @@ export default function ViewReport() {
                 </motion.section>
               )}
 
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+
+                {/* Progress Over Time */}
+                <motion.div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-emerald-600" />
+                    Progress Over Rounds
+                  </h3>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={timeData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis domain={[0, 10]} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="score"
+                          stroke="#10b981"
+                          fill="#10b981"
+                          fillOpacity={0.3}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </motion.div>
+              </div>
+
               {/* Quick Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
@@ -350,68 +378,7 @@ export default function ViewReport() {
             </motion.div>
           )}
 
-          {activeTab === "analytics" && (
-            <motion.div
-              key="analytics"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
-            >
-              {/* Analytics Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Skill Radar Chart */}
-                <motion.div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-cyan-600" />
-                    Skill Distribution
-                  </h3>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={skillData}>
-                        <PolarGrid />
-                        <PolarAngleAxis dataKey="subject" />
-                        <PolarRadiusAxis domain={[0, 10]} />
-                        <Radar
-                          name="Skills"
-                          dataKey="score"
-                          stroke="#06b6d4"
-                          fill="#06b6d4"
-                          fillOpacity={0.3}
-                        />
-                        <Tooltip />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </motion.div>
-
-                {/* Progress Over Time */}
-                <motion.div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 border border-cyan-200/40 shadow-xs">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-600" />
-                    Progress Over Rounds
-                  </h3>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={timeData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis domain={[0, 10]} />
-                        <Tooltip />
-                        <Area
-                          type="monotone"
-                          dataKey="score"
-                          stroke="#10b981"
-                          fill="#10b981"
-                          fillOpacity={0.3}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.div>
-          )}
+        
 
 {activeTab === "details" && (
   <div className="space-y-6">
@@ -481,9 +448,7 @@ export default function ViewReport() {
                 {/* HEADER */}
                 <div className="flex justify-between mb-3">
                   <div className="flex gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getScoreColor(q.score)} text-white flex items-center justify-center font-bold`}>
-                      {q.score || 0}
-                    </div>
+                   
                     <div>
                       <h4 className="font-semibold text-slate-900">
                         Question {idx + 1}

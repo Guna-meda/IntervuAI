@@ -119,7 +119,7 @@ const userName =
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                   >
-                    <div className="font-semibold text-gray-800">{userName}</div>
+                    <div className="font-semibold px-4 text-gray-800">{userName}</div>
                   </motion.div>
                 )}
               </AnimatePresence>

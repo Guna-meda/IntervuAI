@@ -14,7 +14,6 @@ import { getUserInterviews, getInterviewDetails, getInterviewStats, deleteInterv
 import { useUserInterviewStore } from '../store/interviewStore';
 
 export default function IntervuAI() {
-  const [userName] = useState('Guna');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeInterviews, setActiveInterviews] = useState([]);
@@ -463,7 +462,7 @@ export default function IntervuAI() {
                 variants={itemVariants}
                 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent"
               >
-                Welcome back, {userName}!
+                Welcome back!
               </motion.h1>
               <motion.p
                 variants={itemVariants}
@@ -853,51 +852,7 @@ export default function IntervuAI() {
               </div>
             </motion.section>
 
-            {/* Performance Analytics Section */}
-            <motion.section
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-cyan-200/40 shadow-xs"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="p-1.5 sm:p-2 bg-indigo-100 rounded-lg sm:rounded-xl">
-                  <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
-                </div>
-                <h2 className="font-semibold text-slate-900 text-base sm:text-lg md:text-xl">
-                  Performance Analytics
-                </h2>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                {[
-                  { label: 'Average Score', value: stats.averageScore || 0, unit: '/10', 
-                    gradient: 'from-cyan-50 to-blue-50', text: 'text-cyan-700', icon: TrendingUp },
-                  { label: 'Completion Rate', value: stats.completionRate || 0, unit: '%', 
-                    gradient: 'from-emerald-50 to-teal-50', text: 'text-emerald-700', icon: CheckCircle2 },
-                  { label: 'Recent Activity', value: stats.recentActivity || 0, unit: 'sessions', 
-                    gradient: 'from-amber-50 to-orange-50', text: 'text-amber-700', icon: Zap }
-                ].map((stat, index) => (
-                  <motion.div
-                    key={stat.label}
-                    variants={itemVariants}
-                    className={`bg-gradient-to-br ${stat.gradient} p-2 sm:p-3 rounded-lg sm:rounded-2xl border border-slate-200/40 relative overflow-hidden group hover:shadow-md transition-all`}
-                  >
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-1 sm:mb-1.5">
-                        <p className={`text-xs sm:text-sm font-medium ${stat.text}`}>{stat.label}</p>
-                        <stat.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${stat.text}`} />
-                      </div>
-                      <p className={`text-lg sm:text-2xl font-bold ${stat.text.replace('700', '900')}`}>
-                        {stat.value} {stat.unit}
-                      </p>
-                    </div>
-                    <div className="absolute bottom-0 right-0 w-12 sm:w-16 h-12 sm:h-16 bg-white/20 rounded-tl-full" />
-                  </motion.div>
-                ))}
-              </div>
-            </motion.section>
-
+          
            
           </div>
 
@@ -974,51 +929,7 @@ export default function IntervuAI() {
               </div>
             </motion.div>
 
-            {/* Progress Summary Card */}
-            {allInterviews.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 text-white shadow-lg relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-20 sm:w-32 h-20 sm:h-32 bg-white/10 rounded-full -translate-y-12 sm:-translate-y-16 translate-x-12 sm:translate-x-16" />
-                <div className="absolute bottom-0 left-0 w-16 sm:w-24 h-16 sm:h-24 bg-white/10 rounded-full translate-y-8 sm:translate-y-12 -translate-x-8 sm:-translate-x-12" />
-                
-                <div className="relative z-10">
-                  <div className="flex items-start justify-between mb-1.5 sm:mb-2">
-                    <div>
-                      <h3 className="font-semibold text-sm sm:text-base mb-0.5 sm:mb-1">Progress Summary</h3>
-                      <p className="text-cyan-100 text-xs sm:text-sm opacity-90">Keep up the great work!</p>
-                    </div>
-                    <div className="p-1 sm:p-1.5 bg-white/20 rounded-lg sm:rounded-xl backdrop-blur-sm">
-                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 sm:space-y-2 mb-2 sm:mb-3">
-                    <div className="flex items-center justify-between py-1 border-b border-white/20 flex-wrap gap-1">
-                      <span className="text-cyan-100 text-xs sm:text-sm">This Week</span>
-                      <span className="font-semibold">{Math.min(activeInterviews.length, 3)} sessions</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1 flex-wrap gap-1">
-                      <span className="text-cyan-100 text-xs sm:text-sm">Total Practice</span>
-                      <span className="font-semibold">{stats.totalInterviews * 30 || 0} min</span>
-                    </div>
-                  </div>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleNewInterview}
-                    className="w-full bg-white text-cyan-600 font-semibold py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg sm:rounded-xl hover:shadow-md transition-all flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm relative z-20"
-                  >
-                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                    New Session
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
+            
 
             {/* Daily Insight Card */}
             <motion.div

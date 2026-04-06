@@ -253,10 +253,7 @@ export default function InterviewPage() {
     let newResponse;
 
     try {
-      const isNonInformative =
-        transcript.trim().toLowerCase() === "i don't know" ||
-        transcript.trim().toLowerCase() === "i dont know" ||
-        transcript.trim().length < 10;
+      
 
       newResponse = {
         id: Date.now(),
@@ -284,12 +281,9 @@ export default function InterviewPage() {
           response.id === newResponse.id
             ? {
                 ...response,
-                score: feedbackData.score || (isNonInformative ? 2 : 7),
+                score: feedbackData.score ,
                 feedback:
-                  feedbackData.feedback ||
-                  (isNonInformative
-                    ? "Please provide a more detailed response or clarify if you need help."
-                    : "Good response, could use more detail."),
+                  feedbackData.feedback,
                 expectedAnswer:
                   feedbackData.expectedAnswer ||
                   "A complete response addressing the question.",
@@ -304,7 +298,7 @@ export default function InterviewPage() {
       const questionData = {
         question: currentQuestion,
         answer: transcript,
-        score: feedbackData.score || (isNonInformative ? 2 : 7),
+        score: feedbackData.score,
         feedback: feedbackData.feedback,
         expectedAnswer:
           feedbackData.expectedAnswer ||
@@ -679,9 +673,16 @@ export default function InterviewPage() {
                                           : "bg-rose-500"
                                     }`}
                                   />
-                                  <span className="text-xs font-semibold text-slate-700">
-                                    {response.score}/10
-                                  </span>
+                                  {response.status === "processing" ? (
+  <span className="text-xs text-amber-500 flex items-center gap-1">
+    <div className="w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+    Analyzing...
+  </span>
+) : (
+  <span className="text-xs font-semibold text-slate-700">
+    {response.score}/10
+  </span>
+)}
                                 </div>
                               </div>
                               <p className="text-xs text-slate-600 line-clamp-2">

@@ -18,7 +18,6 @@ export const useUserInterviewStore = create(
         { value: 'frontend', label: 'Frontend Developer', icon: '🎨' },
         { value: 'backend', label: 'Backend Developer', icon: '⚙️' },
         { value: 'fullstack', label: 'Full Stack Developer', icon: '🔧' },
-        { value: 'app', label: 'App Developer', icon: '📱' },
       ],
       skills: [],
       // Actions
